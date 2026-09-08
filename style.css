@@ -1,0 +1,297 @@
+/* Typography Integration */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* The User-Requested Color Palette */
+  /* THE FIX: Replaced the light grey background with a Midnight Ink to Deep Slate linear gradient to create a darker, more premium aesthetic */
+  --bg-main-theme: linear-gradient(135deg, #090d16 0%, #0f172a 100%);
+  --card-deep-blue: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+  --cta-orange: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  
+  /* Accent & Text Colors */
+  --pure-white: #ffffff;
+  --text-muted: #94a3b8;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Page Layout - Updated to Dark Premium Background */
+.layout-wrapper {
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* THE FIX: Applied the newly defined --bg-main-theme CSS variable to the layout wrapper */
+  background: var(--bg-main-theme);
+  padding: 24px;
+}
+
+/* The Main Deep Blue Card */
+.auth-card {
+  background: var(--card-deep-blue);
+  width: 100%;
+  max-width: 420px;
+  border-radius: 24px; /* Soft, premium curves */
+  padding: 48px 40px;
+  text-align: center;
+  /* Complex layering of shadows for an "exciting" floating effect */
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.4), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle decorative glow inside the top of the card */
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 100px;
+  background: rgba(249, 115, 22, 0.2); /* Faint orange glow */
+  filter: blur(50px);
+  z-index: 0;
+}
+
+/* Branding Elements */
+.card-header, .role-container, .auth-form, .card-footer {
+  position: relative;
+  z-index: 1; /* Keeps content above the background glow */
+}
+
+.hexagon-logo {
+  color: #fb923c; /* Orange accent */
+  margin-bottom: 16px;
+  animation: float 6s ease-in-out infinite; /* Subtle floating animation */
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+.brand-title {
+  color: var(--pure-white);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+/* Adding the white accent in the same category as the deep blue */
+.brand-title span {
+  color: #fb923c; 
+}
+
+.brand-subtitle {
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 400;
+  margin-bottom: 40px;
+}
+
+/* Role Selection Design (Segmented Control Style) */
+.role-container {
+  margin-bottom: 36px;
+}
+
+.role-prompt {
+  display: block;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.role-toggle-group {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2); /* Darker well for the buttons to sit inside */
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid var(--border-subtle);
+}
+
+.toggle-btn {
+  flex: 1;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-btn:hover:not(.active-orange) {
+  color: var(--pure-white);
+}
+
+/* The Exciting Orange Active State */
+.toggle-btn.active-orange {
+  background: var(--cta-orange);
+  color: var(--pure-white);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
+/* Google Single Sign-On (SSO) Button - Styled exactly like your reference images */
+.google-sso-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--pure-white); /* White button */
+  border: none;
+  border-radius: 50px; /* Fully rounded pill shape */
+  padding: 8px 24px 8px 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.google-sso-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* THE FIX: Styles the button while it's mid-authentication, giving clear visual feedback that a request is in progress */
+.google-sso-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* The circular initial avatar inside the button */
+.user-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  background: #a855f7; /* Purple to match your image reference */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.btn-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  margin-left: 12px;
+}
+
+.primary-text {
+  color: #0f172a; /* Deep blue text on the white button */
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.secondary-text {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.card-footer {
+  margin-top: 36px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.card-footer strong {
+  color: var(--pure-white);
+  cursor: pointer;
+}
+
+/* THE FIX: Appended all the missing CSS rules required to style the dynamic onboarding form and override the browser's default white inputs */
+
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Creates clean, even spacing between each input group */
+  text-align: left;
+  width: 100%;
+  position: relative;
+  z-index: 1; /* Ensures the form sits above the subtle decorative background glow */
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.custom-input {
+  width: 100%;
+  /* THE FIX: Applies a dark, slightly transparent background to the input fields to match the premium dark theme */
+  background: rgba(15, 23, 42, 0.6); 
+  border: 1px solid var(--border-subtle);
+  color: var(--pure-white);
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  /* THE FIX: Adds a smooth transition effect so the input visually responds when a user clicks on it */
+  transition: all 0.3s ease;
+}
+
+/* THE FIX: The :focus pseudo-class [a keyword added to a selector that specifies a special state of the selected element] changes the border to orange when the user is typing */
+.custom-input:focus {
+  outline: none;
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
+.custom-input::placeholder {
+  color: #475569;
+}
+
+/* THE FIX: Ensures the dropdown menu options for Nationality and ID Type do not default back to a bright white background */
+.custom-input option {
+  background: #0f172a;
+  color: var(--pure-white);
+}
+
+/* THE FIX: Re-styling the specific continue button for the form to utilize the orange gradient */
+.continue-btn {
+  background: var(--cta-orange);
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.continue-btn .primary-text {
+  color: var(--pure-white);
+  font-size: 16px;
+}
+
+/* Absolute Responsiveness */
+@media screen and (max-width: 480px) {
+  .auth-card {
+    padding: 32px 24px;
+  }
+  
+  .brand-title {
+    font-size: 28px;
+  }
+}

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get It Login</title>
+  
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  
+  <!-- Importing the Babel Compiler via CDN -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- THE FIX: Added the official Google Identity Services script to securely handle the OAuth 2.0 flow -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+        const { useState } = React;
+
+    const LoginPage = () => {
+      const [selectedRole, setSelectedRole] = useState('buyer');
+      // THE FIX: Added authStage to track whether the user is viewing the login button or the PII onboarding form
+      const [authStage, setAuthStage] = useState('login'); 
+      // THE FIX: Stores the real Google profile (name, email, picture) once fetched, instead of hardcoded placeholder text
+      const [googleProfile, setGoogleProfile] = useState(null);
+      // THE FIX: Tracks whether we're mid-network-call (fetching Google's userinfo) so we can show a loading state instead of a frozen button
+      const [isAuthenticating, setIsAuthenticating] = useState(false);
+      // THE FIX: Controlled form state object holding every onboarding field, keyed by each input's "name" attribute
+      const [formData, setFormData] = useState({
+        username: '',
+        fullName: '',
+        phone: '',
+        dob: '',
+        nationality: '',
+        stateOfOrigin: '',
+        serviceCategory: '',
+        idType: ''
+      });
+
+      // THE FIX: A single generic handler reused across every input field. It reads the input's "name" attribute
+      // and updates only that one key in formData, using the Spread Operator to copy the rest of the object unchanged
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prevData) => ({
+          ...prevData,
+          [name]: value
+        }));
+      };
+
+            const handleGoogleLogin = (e) => {
+        e.preventDefault(); 
+        
+        try {
+          const client = google.accounts.oauth2.initTokenClient({
+            client_id: '230604988868-b2tsvfvqbp79u06aj8oe01o45d4ftood.apps.googleusercontent.com',
+            scope: 'email profile',
+            // THE FIX: The callback is now "async" so it can pause and wait for the userinfo fetch below to finish
+            callback: async (tokenResponse) => {
+              // THE FIX: Turn on the loading state immediately so the button reflects that a network request is in progress
+              setIsAuthenticating(true);
+
+              try {
+                // THE FIX: Call Google's userinfo endpoint with the access token to fetch the REAL signed-in user's name, email,
+                // and photo, replacing the old hardcoded "Oluyemi" / "oluyemiayomikun689@gmail.com" placeholder text entirely
+                const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: {
+                    Authorization: `Bearer ${tokenResponse.access_token}`
+                  }
+                });
+
+                if (!userInfoResponse.ok) {
+                  throw new Error('Failed to fetch Google profile data.');
+                }
+
+                const profile = await userInfoResponse.json();
+                // THE FIX: profile now contains { name, email, picture, ... } straight from Google, no more hardcoded text
+                setGoogleProfile(profile);
+
+                // THE FIX: Using Local Storage to check if this specific role is already registered.
+                const existingRecord = localStorage.getItem(`registered_${selectedRole}`);
+
+                if (existingRecord) {
+                  // THE FIX: If a record exists for this role, save it as the active session under a separate "currentUser" key,
+                  // so home.html knows who is logged in right now
+                  localStorage.setItem('currentUser', existingRecord);
+                  window.location.href = "home.html";
+                } else {
+                  // THE FIX: If no record exists for this role, show the onboarding form to collect the rest of their profile
+                  setAuthStage('onboarding');
+                }
+              } catch (error) {
+                // THE FIX: Any network failure now shows a clear message instead of silently leaving the user on a frozen button
+                alert("We couldn't reach Google to verify your account. Please check your connection and try again.");
+              } finally {
+                // THE FIX: "finally" always runs whether the try succeeded or failed, so the loading state never gets stuck on
+                setIsAuthenticating(false);
+              }
+            },
+          });
+          
+          client.requestAccessToken();
+        } catch (error) {
+          alert("Google authentication script has not finished loading. Please check your connection and try again.");
+        }
+      };
+
+            const handleOnboardingSubmit = (e) => {
+        e.preventDefault();
+
+        // THE FIX: Combine the real Google profile with everything the user typed, plus the selected role, into one record —
+        // this is the exact object that will later be sent to the PostgreSQL backend once it exists
+        const userRecord = {
+          ...formData,
+          role: selectedRole,
+          email: googleProfile ? googleProfile.email : '',
+          googleName: googleProfile ? googleProfile.name : '',
+          googlePicture: googleProfile ? googleProfile.picture : ''
+        };
+
+        const serializedRecord = JSON.stringify(userRecord);
+
+        // THE FIX: "registered_<role>" is the permanent record; "currentUser" is the active session home.html reads from
+        localStorage.setItem(`registered_${selectedRole}`, serializedRecord);
+        localStorage.setItem('currentUser', serializedRecord);
+
+        window.location.href = "home.html";
+      }
+
+      return (
+        <div className="layout-wrapper">
+          <div className="auth-card">
+            
+            {/* THE FIX: Implemented a Ternary Operator. If authStage is 'login', show the Google button. If not, show the form. */}
+            {authStage === 'login' ? (
+              <>
+                <div className="card-header">
+                  <div className="hexagon-logo">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                  </div>
+                  <h1 className="brand-title">Get<span>it</span></h1>
+                  <p className="brand-subtitle">Urban Logistics & Services.</p>
+                </div>
+
+                <div className="role-container">
+                  <span className="role-prompt">Select your account type</span>
+                  <div className="role-toggle-group">
+                    <button 
+                      className={`toggle-btn ${selectedRole === 'buyer' ? 'active-orange' : ''}`}
+                      onClick={() => setSelectedRole('buyer')}
+                    >
+                      Buyer
+                    </button>
+                    <button 
+                      className={`toggle-btn ${selectedRole === 'seller' ? 'active-orange' : ''}`}
+                      onClick={() => setSelectedRole('seller')}
+                    >
+                      Seller
+                    </button>
+                    <button 
+                      className={`toggle-btn ${selectedRole === 'courier' ? 'active-orange' : ''}`}
+                      onClick={() => setSelectedRole('courier')}
+                    >
+                      Courier
+                    </button>
+                  </div>
+                </div>
+
+                                <form onSubmit={handleGoogleLogin} className="auth-form">
+                  {/* THE FIX: disabled={isAuthenticating} prevents double-clicking mid-request and firing two Google popups */}
+                  <button type="submit" className="google-sso-btn" disabled={isAuthenticating}>
+                    <div className="user-avatar-placeholder">
+                      {/* THE FIX: Shows a plain "G" before login instead of a hardcoded "O" for a specific person */}
+                      <span>G</span>
+                    </div>
+                    <div className="btn-text-group">
+                      {/* THE FIX: Ternary Operator swaps the label to "Signing in..." while the request to Google is in flight */}
+                      <span className="primary-text">{isAuthenticating ? 'Signing in...' : 'Continue with Google'}</span>
+                      <span className="secondary-text">Uses your Google account</span>
+                    </div>
+                    <svg width="24" height="24" viewBox="0 0 48 48" className="google-logo">
+                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                    </svg>
+                  </button>
+                </form>
+
+                <div className="card-footer">
+                   <p>By continuing, you agree to our <br/> <strong>Terms of Service</strong> & <strong>Privacy Policy</strong>.</p>
+                </div>
+              </>
+            ) : (
+              // THE FIX: The newly designed PII form that renders after successful login
+              <>
+                                <div className="card-header">
+                  <h1 className="brand-title">Complete <span>Profile</span></h1>
+                  {/* THE FIX: Greets the user by their real Google first name, falling back to the generic version if it hasn't loaded */}
+                  <p className="brand-subtitle">
+                    {googleProfile
+                      ? `Welcome, ${googleProfile.name.split(' ')[0]}! Let's set up your ${selectedRole} account.`
+                      : `Let's set up your ${selectedRole} account.`}
+                  </p>
+                </div>
+                
+                <form onSubmit={handleOnboardingSubmit} className="onboarding-form">
+                  {/* THE FIX: Added the mandatory Username field for all 3 entity roles to establish a unique Identifier [a specific piece of data used to distinguish one user from another in a database] */}
+                                    <div className="input-group">
+                    <label>Username</label>
+                    <input type="text" name="username" required placeholder="Choose a unique username" className="custom-input" value={formData.username} onChange={handleInputChange} />
+                  </div>
+
+                                    <div className="input-group">
+                    <label>Full Name</label>
+                    {/* THE FIX: Placeholder changed from a specific hardcoded name to a generic example, since every user sees this field */}
+                    <input type="text" name="fullName" required placeholder="e.g., Jane Doe" className="custom-input" value={formData.fullName} onChange={handleInputChange} />
+                  </div>
+                  
+                                    <div className="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" name="phone" required placeholder="+234..." className="custom-input" value={formData.phone} onChange={handleInputChange} />
+                  </div>
+
+                                    <div className="input-group">
+                    <label>Date of Birth</label>
+                    <input type="date" name="dob" required className="custom-input" value={formData.dob} onChange={handleInputChange} />
+                  </div>
+
+                                    <div className="input-group">
+                    <label>Nationality</label>
+                    <select name="nationality" required className="custom-input" value={formData.nationality} onChange={handleInputChange}>
+                      <option value="">Select Nationality...</option>
+                      <option value="nigerian">Nigerian</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                                    <div className="input-group">
+                    <label>State of Origin (Optional)</label>
+                    <input type="text" name="stateOfOrigin" placeholder="e.g., Lagos, Ogun" className="custom-input" value={formData.stateOfOrigin} onChange={handleInputChange} />
+                  </div>
+
+                  {/* Logical AND Operators to show specific fields based on the role */}
+                                    {selectedRole === 'seller' && (
+                    <div className="input-group">
+                      <label>Primary Service Category</label>
+                      <select name="serviceCategory" required className="custom-input" value={formData.serviceCategory} onChange={handleInputChange}>
+                        <option value="">Select a skill/trade...</option>
+                        <option value="artisan">Local Artisan</option>
+                        <option value="vendor">Product Vendor</option>
+                      </select>
+                    </div>
+                  )}
+
+                                    {selectedRole === 'courier' && (
+                    <div className="input-group">
+                      <label>Primary Means of Identification</label>
+                      <select name="idType" required className="custom-input" value={formData.idType} onChange={handleInputChange}>
+                        <option value="">Select ID Type...</option>
+                        <option value="nin">NIN</option>
+                        <option value="drivers_license">Driver's License</option>
+                        <option value="voters_card">Voter's Card</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <button type="submit" className="google-sso-btn continue-btn">
+                    <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>Complete Profile</span>
+                  </button>
+                </form>
+              </>
+            )}
+
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<LoginPage />);
+  </script>
+</body>
+</html>
