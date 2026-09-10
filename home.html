@@ -7,7 +7,7 @@
   
   <link rel="stylesheet" href="style.css">
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
@@ -17,13 +17,75 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    const mockNearbyServices = [
+      { 
+        id: 1, providerName: 'Adaeze Okafor', category: 'Plumbing Repair', rating: 4.9, price: '₦8,500', distance: '1.2km away', 
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#94a3b8"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.5 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg> 
+      },
+      { 
+        id: 2, providerName: 'Chidi Emeka', category: 'AC Installation', rating: 4.7, price: '₦25,000', distance: '2.4km away', 
+        /* THE FIX: A perfectly symmetrical snowflake built with geometric intersecting lines */
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="2" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <line x1="5" y1="5" x2="19" y2="19" />
+            <line x1="5" y1="19" x2="19" y2="5" />
+            <polyline points="15 5 12 8 9 5" fill="none" />
+            <polyline points="15 19 12 16 9 19" fill="none" />
+            <polyline points="5 9 8 12 5 15" fill="none" />
+            <polyline points="19 9 16 12 19 15" fill="none" />
+          </svg>
+        )
+      },
+      { 
+        id: 3, providerName: 'Fatima Sule', category: 'House Cleaning', rating: 5.0, price: '₦6,000', distance: '0.8km away', 
+        /* THE FIX: A classic, unmistakable sweeping broom with transparent cutouts to simulate bristles */
+        icon: (
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <line x1="19" y1="5" x2="11" y2="13" stroke="#d97706" strokeWidth="3" strokeLinecap="round" />
+            <path d="M12 12 L5 21 C 4.5 21.8 5 23 6 23 L16 23 C 17 23 17.5 21.8 17 21 L12 12 Z" fill="#d97706" />
+            <line x1="8" y1="23" x2="9" y2="18" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="11" y1="23" x2="11" y2="17" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="14" y1="23" x2="13" y2="18" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        )
+      },
+      { 
+        id: 4, providerName: 'Tunde Bakare', category: 'Electrical Wiring', rating: 4.8, price: '₦12,000', distance: '3.1km away', 
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#facc15"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg> 
+      },
+      { 
+        id: 5, providerName: 'Ngozi Umeh', category: 'Furniture Assembly', rating: 4.6, price: '₦7,500', distance: '1.9km away', 
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#b45309"><path d="M4 18v3h3v-3h10v3h3v-6H4v3zm15-8h3v3h-3v-3zM2 10h3v3H2v-3zm15 3H7V5c0-1.1.9-2 2-2h6c1.1 0 2 .9 2 2v8z"/></svg> 
+      },
+      { 
+        id: 6, providerName: 'Emeka Obi', category: 'Painting Services', rating: 4.9, price: '₦18,000', distance: '2.7km away', 
+        icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.09-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4 11 4.67 11 5.5 10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4 16 4.67 16 5.5 15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8 19 8.67 19 9.5 18.33 11 17.5 11z"/></svg> 
+      }
+    ];
+
+    const mockListings = [
+      { id: 1, title: 'Professional Plumbing Repair', price: '₦8,500', views: 142, status: 'Active' },
+      { id: 2, title: 'Emergency Pipe Fitting', price: '₦15,000', views: 87, status: 'Active' },
+      { id: 3, title: 'Water Heater Installation', price: '₦22,000', views: 34, status: 'Paused' }
+    ];
+
+    const mockDeliveries = [
+      { id: 1, pickup: 'Ikeja City Mall', dropoff: 'Magodo Phase 2', fee: '₦2,200', distance: '6.4km', status: 'Available' },
+      { id: 2, pickup: 'Computer Village', dropoff: 'Yaba Tech Hub', fee: '₦1,500', distance: '3.1km', status: 'Available' },
+      { id: 3, pickup: 'Lekki Phase 1', dropoff: 'Victoria Island', fee: '₦2,800', distance: '7.9km', status: 'Available' }
+    ];
+
+    const mockNotifications = [
+      { id: 1, text: 'Adaeze Okafor accepted your service request', time: '10 minutes ago' },
+      { id: 2, text: 'New message from Chidi Emeka', time: '1 hour ago' },
+      { id: 3, text: 'Your payment of ₦8,500 was confirmed', time: '3 hours ago' }
+    ];
+
     const Dashboard = () => {
-      // THE FIX: currentUser holds the logged-in user's record, read from Local Storage on page load, or null if nobody is logged in
       const [currentUser, setCurrentUser] = useState(null);
 
-      // THE FIX: This useEffect acts as a route guard. It runs once when the page first loads, checks Local Storage for an
-      // active session, and if none exists, sends the visitor straight back to the login page instead of letting them view
-      // the dashboard directly by typing home.html into the address bar
       useEffect(() => {
         const storedUser = localStorage.getItem('currentUser');
 
@@ -32,48 +94,169 @@
           return;
         }
 
-        // THE FIX: JSON.parse converts the stored text string back into a real JavaScript object we can read properties from
         setCurrentUser(JSON.parse(storedUser));
       }, []);
 
-      // THE FIX: handleLogout now actually ends the session instead of just changing the page
       const handleLogout = () => {
-        // THE FIX: Removes only the ACTIVE session, not the permanent "registered_<role>" record — the user is signed out
-        // right now, but next time they log in with the same role, they still skip the onboarding form
         localStorage.removeItem('currentUser');
         window.location.href = "index.html";
       };
 
-      return (
-        <div className="layout-wrapper">
-          {/* We reuse the auth-card class but widen it to look more like a standard software dashboard */}
-          <div className="auth-card" style={{ maxWidth: '800px' }}>
-            
-                        <div className="card-header">
-              <h1 className="brand-title">Get<span>it</span> Workspace</h1>
-              {/* THE FIX: Greets the real signed-in user by name instead of a generic subtitle, once currentUser has loaded */}
-              <p className="brand-subtitle">
-                {currentUser ? `Welcome back, ${currentUser.googleName.split(' ')[0]}.` : 'Loading your workspace...'}
-              </p>
-            </div>
-            
-            <div style={{ color: 'white', textAlign: 'left', margin: '40px 0', padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 style={{ marginBottom: '10px', color: '#fb923c' }}>
-                {/* THE FIX: Shows the real role the user selected (Buyer / Seller / Courier) instead of a static heading */}
-                {currentUser ? `Signed in as ${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}` : 'Authentication Successful'}
-              </h3>
-              <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#94a3b8' }}>
-                {currentUser
-                  ? `Hey ${currentUser.fullName || currentUser.googleName}, your profile data has been saved locally. In the future, we will use React State to dynamically inject the ${currentUser.role} interface right here.`
-                  : 'Your profile data has been processed. In the future, we will use React State to dynamically inject the Buyer, Seller, or Courier interface right here based on the role you selected during login.'}
-              </p>
-            </div>
-
-            <button onClick={handleLogout} className="google-sso-btn continue-btn">
-              <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>Secure Log Out</span>
-            </button>
-
+      if (!currentUser) {
+        return (
+          <div className="layout-wrapper">
+            <p style={{ color: '#94a3b8' }}>Loading your workspace...</p>
           </div>
+        );
+      }
+
+      const firstName = currentUser.googleName ? currentUser.googleName.split(' ')[0] : 'there';
+      const roleLabel = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+
+      return (
+        <div className="home-page-wrapper">
+
+          <nav className="navbar">
+            <div className="nav-logo">Get<span>it</span></div>
+            <div className="nav-links">
+              <button className="nav-icon-btn" title="Search">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#94a3b8"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+              </button>
+              <button className="nav-icon-btn" title="Messages">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#94a3b8"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+              </button>
+              <button className="nav-icon-btn" title="Notifications">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#94a3b8"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+              </button>
+              <div className="nav-avatar">
+                {currentUser.googlePicture
+                  ? <img src={currentUser.googlePicture} alt={firstName} className="nav-avatar-img" />
+                  : <span>{firstName.charAt(0)}</span>}
+              </div>
+            </div>
+          </nav>
+
+          <main className="home-content">
+
+            <div className="home-header">
+              <div>
+                <h1 className="home-greeting">Welcome back, {firstName}</h1>
+                <p className="home-subgreeting">Here's what's happening near you today.</p>
+              </div>
+              <span className="role-badge">{roleLabel}</span>
+            </div>
+
+            <div className="stats-glass-panel">
+              {currentUser.role === 'buyer' && (
+                <>
+                  <div className="stat-item"><span className="stat-number">3</span><span className="stat-label">Active Requests</span></div>
+                  <div className="stat-item"><span className="stat-number">12</span><span className="stat-label">Completed Jobs</span></div>
+                  <div className="stat-item"><span className="stat-number">4.8</span><span className="stat-label">Avg. Rating Given</span></div>
+                </>
+              )}
+              {currentUser.role === 'seller' && (
+                <>
+                  <div className="stat-item"><span className="stat-number">3</span><span className="stat-label">Active Listings</span></div>
+                  <div className="stat-item"><span className="stat-number">263</span><span className="stat-label">Total Views</span></div>
+                  <div className="stat-item"><span className="stat-number">₦45,500</span><span className="stat-label">This Month</span></div>
+                </>
+              )}
+              {currentUser.role === 'courier' && (
+                <>
+                  <div className="stat-item"><span className="stat-number">3</span><span className="stat-label">Available Jobs</span></div>
+                  <div className="stat-item"><span className="stat-number">27</span><span className="stat-label">Deliveries Done</span></div>
+                  <div className="stat-item"><span className="stat-number">4.9</span><span className="stat-label">Courier Rating</span></div>
+                </>
+              )}
+            </div>
+
+            {currentUser.role === 'buyer' && (
+              <>
+                <div className="section-header">
+                  <h2 className="section-title">Nearby Services</h2>
+                  <button className="post-request-btn">+ Post a Request</button>
+                </div>
+                <div className="service-grid">
+                  {mockNearbyServices.map((service) => (
+                    <div className="service-card" key={service.id}>
+                      <div className="service-card-icon">{service.icon}</div>
+                      <h3 className="service-card-title">{service.category}</h3>
+                      <p className="service-card-provider">{service.providerName}</p>
+                      <div className="service-card-meta">
+                        <span className="service-rating">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="#eab308" style={{marginRight: '4px', verticalAlign: 'text-bottom'}}><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                          {service.rating}
+                        </span>
+                        <span className="service-distance">{service.distance}</span>
+                      </div>
+                      <div className="service-card-footer">
+                        <span className="service-price">{service.price}</span>
+                        <button className="request-btn">Request</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {currentUser.role === 'seller' && (
+              <>
+                <div className="section-header">
+                  <h2 className="section-title">Your Listings</h2>
+                  <button className="post-request-btn">+ Add Listing</button>
+                </div>
+                <div className="listing-list">
+                  {mockListings.map((listing) => (
+                    <div className="listing-row" key={listing.id}>
+                      <div className="listing-row-main">
+                        <h3 className="listing-title">{listing.title}</h3>
+                        <p className="listing-meta">{listing.views} views</p>
+                      </div>
+                      <span className={`status-pill ${listing.status === 'Active' ? 'status-active' : 'status-paused'}`}>
+                        {listing.status}
+                      </span>
+                      <span className="listing-price">{listing.price}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {currentUser.role === 'courier' && (
+              <>
+                <div className="section-header">
+                  <h2 className="section-title">Available Deliveries</h2>
+                </div>
+                <div className="listing-list">
+                  {mockDeliveries.map((job) => (
+                    <div className="listing-row" key={job.id}>
+                      <div className="listing-row-main">
+                        <h3 className="listing-title">{job.pickup} → {job.dropoff}</h3>
+                        <p className="listing-meta">{job.distance}</p>
+                      </div>
+                      <span className="status-pill status-active">{job.status}</span>
+                      <span className="listing-price">{job.fee}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="section-header">
+              <h2 className="section-title">Recent Notifications</h2>
+            </div>
+            <div className="notification-list">
+              {mockNotifications.map((note) => (
+                <div className="notification-row" key={note.id}>
+                  <p className="notification-text">{note.text}</p>
+                  <span className="notification-time">{note.time}</span>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={handleLogout} className="logout-btn">Secure Log Out</button>
+
+          </main>
         </div>
       );
     };

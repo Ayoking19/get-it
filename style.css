@@ -295,3 +295,407 @@
     font-size: 28px;
   }
 }
+
+/* ============================================= */
+/* HOME PAGE STYLES                               */
+/* ============================================= */
+
+/* THE FIX: Unlike .layout-wrapper (which centers a narrow auth card), the home page needs the full screen width */
+.home-page-wrapper {
+  min-height: 100vh;
+  background: var(--bg-main-theme);
+  font-family: 'Inter', sans-serif;
+}
+
+/* THE FIX: "position: sticky; top: 0;" keeps the navbar visible while the page scrolls, as your brief required */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.nav-logo {
+  color: var(--pure-white);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.nav-logo span {
+  color: #fb923c;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-icon-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--pure-white);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.25s ease;
+}
+
+.nav-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-2px);
+}
+
+.nav-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--cta-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pure-white);
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.nav-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.home-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.home-greeting {
+  color: var(--pure-white);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.home-subgreeting {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.role-badge {
+  background: var(--cta-orange);
+  color: var(--pure-white);
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* THE FIX: Glassmorphism panel — semi-transparent background plus backdrop-filter blur creates the "frosted glass" look */
+.stats-glass-panel {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-number {
+  color: var(--pure-white);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 32px 0 16px;
+}
+
+.section-title {
+  color: var(--pure-white);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.post-request-btn {
+  background: var(--cta-orange);
+  color: var(--pure-white);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.post-request-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.35);
+}
+
+/* THE FIX: CSS Grid with auto-fill + minmax gives us Absolute Responsiveness for free — the browser automatically
+   fits as many 240px-minimum cards per row as will comfortably fit, re-flowing at every screen width without a
+   single media query needed for this specific grid */
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+/* THE FIX: "perspective" on the grid parent is what makes the 3D rotation on individual cards below look realistic
+   instead of flat */
+.service-grid {
+  perspective: 1000px;
+}
+
+.service-card {
+  background: var(--card-deep-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 25px -8px rgba(15, 23, 42, 0.5);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+/* THE FIX: The 3D Tilt effect from your design brief — on hover, the card rotates slightly on two axes and lifts up */
+.service-card:hover {
+  transform: translateY(-6px) rotateX(4deg) rotateY(-4deg);
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5);
+}
+
+.service-card-icon {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.service-card-title {
+  color: var(--pure-white);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.service-card-provider {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.service-card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.service-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.service-price {
+  color: #fb923c;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.request-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pure-white);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.request-btn:hover {
+  background: var(--cta-orange);
+  border-color: transparent;
+}
+
+/* THE FIX: Used by Seller listings and Courier delivery jobs — a horizontal row layout instead of a grid,
+   since these need to show more text-heavy detail per item than the visual service cards do */
+.listing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.listing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-deep-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 16px 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+  transition: transform 0.25s ease;
+}
+
+.listing-row:hover {
+  transform: translateX(4px);
+}
+
+.listing-row-main {
+  flex: 1;
+  min-width: 160px;
+}
+
+.listing-title {
+  color: var(--pure-white);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.listing-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.status-pill {
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.status-paused {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.listing-price {
+  color: #fb923c;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notification-text {
+  color: var(--pure-white);
+  font-size: 13px;
+}
+
+.notification-time {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  display: block;
+  margin: 48px auto 0;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 12px 32px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.logout-btn:hover {
+  border-color: #fb923c;
+  color: #fb923c;
+}
+
+/* THE FIX: Responsiveness for the home page specifically — stacks the header and shrinks padding on small screens,
+   fulfilling the "Absolute Responsiveness" requirement from your design brief */
+@media screen and (max-width: 640px) {
+  .navbar {
+    padding: 14px 16px;
+  }
+
+  .home-content {
+    padding: 24px 16px 48px;
+  }
+
+  .home-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .home-greeting {
+    font-size: 22px;
+  }
+
+  .stats-glass-panel {
+    justify-content: flex-start;
+    gap: 24px;
+  }
+}
