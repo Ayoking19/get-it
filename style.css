@@ -699,3 +699,97 @@
     gap: 24px;
   }
 }
+
+/* ============================================= */
+/* CLASSIFICATION, EDIT/DELETE & REQUEST STYLES   */
+/* ============================================= */
+
+/* THE FIX: Gives the new search input breathing room above the checkbox grid it filters */
+.classification-search {
+  margin-bottom: 10px;
+}
+
+.classification-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.classification-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+}
+
+/* THE FIX: :has() checks whether a checked checkbox exists INSIDE this label, then styles the whole chip as
+   selected — supported in all current major browsers */
+.classification-chip:has(input:checked) {
+  border-color: #fb923c;
+  color: var(--pure-white);
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.classification-chip input {
+  accent-color: #fb923c;
+  cursor: pointer;
+}
+
+.status-waiting {
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+}
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.cancel-btn:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.edit-btn, .delete-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.edit-btn:hover {
+  border-color: #fb923c;
+  color: #fb923c;
+}
+
+.delete-btn:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.edit-input {
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}

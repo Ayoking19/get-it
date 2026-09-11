@@ -19,8 +19,25 @@
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
-        const { useState } = React;
+    <script type="text/babel">
+    const { useState } = React;
+
+    // THE FIX: Classification lists live at module scope so both the onboarding form and (later) the post-creation
+    // forms can reuse the exact same category names — keeping data consistent across the whole app
+    // THE FIX: .sort() appended to both lists guarantees alphabetical order permanently, regardless of what order
+    // new categories get added in later
+    const PROVIDER_CLASSIFICATIONS = [
+      'Furniture', 'Mechanical Engineering', 'Electrical Engineering', 'Cook', 'Plumbing',
+      'Entertainment', 'Electronic Devices', 'Health Expert', 'Gym', 'Graphic Design',
+      'Web Development', 'Photography', 'Tutoring', 'Event Planning', 'Beauty & Salon',
+      'Auto Repair', 'Tailoring', 'Cleaning Services', 'Painting'
+    ].sort();
+
+    const TRADER_CLASSIFICATIONS = [
+      'Food', 'Clothing', 'Electronics', 'Cars', 'Houses', 'Watches', 'Cooking Utensils',
+      'Furniture', 'Transport', 'Books', 'Jewelry', 'Appliances', 'Sports Equipment',
+      'Beauty Products', 'Toys'
+    ].sort();
 
     const LoginPage = () => {
       const [selectedRole, setSelectedRole] = useState('buyer');
@@ -30,7 +47,11 @@
       const [googleProfile, setGoogleProfile] = useState(null);
       // THE FIX: Tracks whether we're mid-network-call (fetching Google's userinfo) so we can show a loading state instead of a frozen button
       const [isAuthenticating, setIsAuthenticating] = useState(false);
-      // THE FIX: Controlled form state object holding every onboarding field, keyed by each input's "name" attribute
+            // THE FIX: Tracks whether a Seller identifies as a Service Provider or a Trader, which determines which
+      // classification list (skills vs. goods) they choose from below
+      const [providerType, setProviderType] = useState('');
+      // THE FIX: "serviceCategory" (a single string) has been replaced with "classifications" (an array), since a
+      // Service Provider or Trader can now select MULTIPLE categories instead of just one
       const [formData, setFormData] = useState({
         username: '',
         fullName: '',
@@ -38,7 +59,7 @@
         dob: '',
         nationality: '',
         stateOfOrigin: '',
-        serviceCategory: '',
+        classifications: [],
         idType: ''
       });
 
@@ -50,6 +71,24 @@
           ...prevData,
           [name]: value
         }));
+      };
+
+      // THE FIX: Tracks what's currently typed into the classification search box, so the checkbox grid below can
+      // be filtered down to matching categories in real time
+      const [classificationSearch, setClassificationSearch] = useState('');
+
+      // THE FIX: Toggles one classification string in or out of the classifications array. .includes() checks if
+      // it's already selected; .filter() removes it if so, or the Spread Operator appends it if not
+      const handleClassificationToggle = (option) => {
+        setFormData((prevData) => {
+          const alreadySelected = prevData.classifications.includes(option);
+          return {
+            ...prevData,
+            classifications: alreadySelected
+              ? prevData.classifications.filter((item) => item !== option)
+              : [...prevData.classifications, option]
+          };
+        });
       };
 
             const handleGoogleLogin = (e) => {
@@ -114,9 +153,10 @@
 
         // THE FIX: Combine the real Google profile with everything the user typed, plus the selected role, into one record —
         // this is the exact object that will later be sent to the PostgreSQL backend once it exists
-        const userRecord = {
+                const userRecord = {
           ...formData,
           role: selectedRole,
+          providerType: selectedRole === 'seller' ? providerType : '',
           email: googleProfile ? googleProfile.email : '',
           googleName: googleProfile ? googleProfile.name : '',
           googlePicture: googleProfile ? googleProfile.picture : ''
@@ -251,14 +291,61 @@
 
                   {/* Logical AND Operators to show specific fields based on the role */}
                                     {selectedRole === 'seller' && (
-                    <div className="input-group">
-                      <label>Primary Service Category</label>
-                      <select name="serviceCategory" required className="custom-input" value={formData.serviceCategory} onChange={handleInputChange}>
-                        <option value="">Select a skill/trade...</option>
-                        <option value="artisan">Local Artisan</option>
-                        <option value="vendor">Product Vendor</option>
-                      </select>
-                    </div>
+                    <>
+                      {/* THE FIX: Provider/Trader toggle, using the same toggle-btn pattern as the Buyer/Seller/Courier
+                          role selector above, so the visual language stays consistent across the whole form */}
+                      <div className="input-group">
+                        <label>What best describes you?</label>
+                        <div className="role-toggle-group" style={{ marginTop: '4px' }}>
+                          <button
+                            type="button"
+                            className={`toggle-btn ${providerType === 'provider' ? 'active-orange' : ''}`}
+                            onClick={() => setProviderType('provider')}
+                          >
+                            Service Provider
+                          </button>
+                          <button
+                            type="button"
+                            className={`toggle-btn ${providerType === 'trader' ? 'active-orange' : ''}`}
+                            onClick={() => setProviderType('trader')}
+                          >
+                            Trader
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* THE FIX: Multi-select checkbox grid. The list shown depends on providerType. A user can
+                          check MULTIPLE boxes here — unlike a Buyer's request or a single listing, which each get
+                          only ONE classification later on */}
+                      {providerType && (
+                        <div className="input-group">
+                          <label>Select all {providerType === 'provider' ? 'skills' : 'goods categories'} that apply</label>
+                          {/* THE FIX: .toLowerCase() on both the option text and the search term makes the match
+                              case-insensitive, so typing "plumb" or "Plumb" both find "Plumbing" */}
+                          <input
+                            type="text"
+                            className="custom-input classification-search"
+                            placeholder="Search categories..."
+                            value={classificationSearch}
+                            onChange={(e) => setClassificationSearch(e.target.value)}
+                          />
+                          <div className="classification-grid">
+                            {(providerType === 'provider' ? PROVIDER_CLASSIFICATIONS : TRADER_CLASSIFICATIONS)
+                              .filter((option) => option.toLowerCase().includes(classificationSearch.toLowerCase()))
+                              .map((option) => (
+                                <label className="classification-chip" key={option}>
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.classifications.includes(option)}
+                                    onChange={() => handleClassificationToggle(option)}
+                                  />
+                                  <span>{option}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                                     {selectedRole === 'courier' && (

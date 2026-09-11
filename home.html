@@ -65,10 +65,44 @@
       }
     ];
 
+        // THE FIX: Combined classification list, used anywhere ONE classification needs to be chosen. Appended .sort()
+    // guarantees this stays alphabetically ordered forever, even if someone adds a new category to the end of this
+    // list later without thinking about where it belongs alphabetically
+    const ALL_CLASSIFICATIONS = [
+      'Furniture', 'Mechanical Engineering', 'Electrical Engineering', 'Cook', 'Plumbing',
+      'Entertainment', 'Electronic Devices', 'Health Expert', 'Gym', 'Graphic Design',
+      'Web Development', 'Photography', 'Tutoring', 'Event Planning', 'Beauty & Salon',
+      'Auto Repair', 'Tailoring', 'Cleaning Services', 'Painting', 'Food', 'Clothing',
+      'Electronics', 'Cars', 'Houses', 'Watches', 'Cooking Utensils', 'Transport',
+      'Books', 'Jewelry', 'Sports Equipment', 'Beauty Products', 'Toys', 'Appliances'
+    ].sort();
+
+    // THE FIX: The Fisher-Yates shuffle algorithm — a standard way to randomly reorder an array. This simulates
+    // "requests shown should change any time the page refreshes." With a real backend, a fresh database query would
+    // do this naturally; on mock data, shuffling the order on each load gives the same visual effect
+    const shuffleArray = (array) => {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+
+    // THE FIX: Added a "classification" field — each listing belongs to exactly ONE classification
     const mockListings = [
-      { id: 1, title: 'Professional Plumbing Repair', price: '₦8,500', views: 142, status: 'Active' },
-      { id: 2, title: 'Emergency Pipe Fitting', price: '₦15,000', views: 87, status: 'Active' },
-      { id: 3, title: 'Water Heater Installation', price: '₦22,000', views: 34, status: 'Paused' }
+      { id: 1, title: 'Professional Plumbing Repair', price: '₦8,500', views: 142, status: 'Active', classification: 'Plumbing' },
+      { id: 2, title: 'Emergency Pipe Fitting', price: '₦15,000', views: 87, status: 'Active', classification: 'Plumbing' },
+      { id: 3, title: 'Water Heater Installation', price: '₦22,000', views: 34, status: 'Paused', classification: 'Plumbing' }
+    ];
+
+    // THE FIX: New mock data — Buyer request posts, each with exactly one classification. This is what a Seller
+    // browses to find work matching their own onboarding classification(s)
+    const mockBuyerRequests = [
+      { id: 101, title: 'Need a plumber to fix a leaking kitchen sink', classification: 'Plumbing', budget: '₦7,000', postedBy: 'Kunle A.' },
+      { id: 102, title: 'Looking for someone to assemble 2 wardrobes', classification: 'Furniture', budget: '₦6,000', postedBy: 'Ifeoma N.' },
+      { id: 103, title: 'Need a graphic designer for a logo redesign', classification: 'Graphic Design', budget: '₦20,000', postedBy: 'Segun O.' },
+      { id: 104, title: 'Looking for a caterer for a small event', classification: 'Cook', budget: '₦30,000', postedBy: 'Ada E.' }
     ];
 
     const mockDeliveries = [
@@ -77,14 +111,31 @@
       { id: 3, pickup: 'Lekki Phase 1', dropoff: 'Victoria Island', fee: '₦2,800', distance: '7.9km', status: 'Available' }
     ];
 
+            // THE FIX: Removed the payment notification entirely — payments happen via each user's own bank app, outside
+    // this platform, so the app has no reason to announce one. Notifications are now scoped to exactly two kinds
+    // of events: request status changes and messages
     const mockNotifications = [
       { id: 1, text: 'Adaeze Okafor accepted your service request', time: '10 minutes ago' },
       { id: 2, text: 'New message from Chidi Emeka', time: '1 hour ago' },
-      { id: 3, text: 'Your payment of ₦8,500 was confirmed', time: '3 hours ago' }
+      { id: 3, text: 'Your plumbing request was seen by 2 providers nearby', time: '2 hours ago' }
     ];
 
-    const Dashboard = () => {
+        const Dashboard = () => {
       const [currentUser, setCurrentUser] = useState(null);
+      // THE FIX: listings is now REAL React state, not the raw mockListings constant, so a Seller's edits and
+      // deletions actually update what's rendered
+      const [listings, setListings] = useState(mockListings);
+      // THE FIX: The id of whichever listing is currently in edit mode; null means nothing is being edited
+      const [editingListingId, setEditingListingId] = useState(null);
+      // THE FIX: Holds in-progress edited values separately from the real listings array, so clicking Cancel
+      // doesn't leave half-typed changes behind
+      const [editDraft, setEditDraft] = useState({ title: '', classification: '' });
+      // THE FIX: A Buyer's own requests. "Request" on a service card adds an entry with status 'waiting'; demo
+      // controls move it to 'active'; completing or cancelling removes it entirely
+      const [myRequests, setMyRequests] = useState([]);
+      // THE FIX: useState's lazy initializer (the () => ... form) runs only on the very first render, not on every
+      // re-render — this is what makes a Seller's matching-requests list reorder itself on every page refresh
+      const [visibleBuyerRequests] = useState(() => shuffleArray(mockBuyerRequests));
 
       useEffect(() => {
         const storedUser = localStorage.getItem('currentUser');
@@ -97,9 +148,58 @@
         setCurrentUser(JSON.parse(storedUser));
       }, []);
 
-      const handleLogout = () => {
+            const handleLogout = () => {
         localStorage.removeItem('currentUser');
         window.location.href = "index.html";
+      };
+
+      const handleStartEdit = (listing) => {
+        setEditingListingId(listing.id);
+        setEditDraft({ title: listing.title, classification: listing.classification });
+      };
+
+      // THE FIX: .map() rebuilds the array, keeping every listing as-is EXCEPT the one being edited, which gets
+      // its title and classification overwritten with editDraft's values
+      const handleSaveEdit = (id) => {
+        setListings((prevListings) =>
+          prevListings.map((item) => (item.id === id ? { ...item, ...editDraft } : item))
+        );
+        setEditingListingId(null);
+      };
+
+      const handleCancelEdit = () => {
+        setEditingListingId(null);
+      };
+
+      // THE FIX: .filter() rebuilds the array containing every listing EXCEPT the deleted one
+      const handleDeleteListing = (id) => {
+        setListings((prevListings) => prevListings.filter((item) => item.id !== id));
+      };
+
+      // THE FIX: .some() checks whether this exact service has already been requested, preventing duplicates
+      const handleSendRequest = (service) => {
+        const alreadyRequested = myRequests.some((req) => req.sourceId === service.id);
+        if (alreadyRequested) return;
+
+        setMyRequests((prevRequests) => [
+          ...prevRequests,
+          { id: Date.now(), sourceId: service.id, title: service.category, provider: service.providerName, status: 'waiting' }
+        ]);
+      };
+
+      // THE FIX: Demo-only control simulating the OTHER party (the provider) approving the request. Once the real
+      // backend exists, this state change is triggered by the provider's own account — a Buyer never clicks this
+      // themselves in the finished app
+      const handleApproveRequest = (id) => {
+        setMyRequests((prevRequests) =>
+          prevRequests.map((req) => (req.id === id ? { ...req, status: 'active' } : req))
+        );
+      };
+
+      // THE FIX: Completing OR cancelling both remove the entry from myRequests — that's what "goes back to normal
+      // like before any request was made" means here: it disappears from view, and the original card is requestable again
+      const handleEndRequest = (id) => {
+        setMyRequests((prevRequests) => prevRequests.filter((req) => req.id !== id));
       };
 
       if (!currentUser) {
@@ -154,11 +254,12 @@
                   <div className="stat-item"><span className="stat-number">4.8</span><span className="stat-label">Avg. Rating Given</span></div>
                 </>
               )}
-              {currentUser.role === 'seller' && (
+                            {currentUser.role === 'seller' && (
                 <>
+                  {/* THE FIX: Removed the "This Month" earnings stat entirely — the platform never handles payment
+                      amounts, so it has no accurate figure to show here anyway */}
                   <div className="stat-item"><span className="stat-number">3</span><span className="stat-label">Active Listings</span></div>
                   <div className="stat-item"><span className="stat-number">263</span><span className="stat-label">Total Views</span></div>
-                  <div className="stat-item"><span className="stat-number">₦45,500</span><span className="stat-label">This Month</span></div>
                 </>
               )}
               {currentUser.role === 'courier' && (
@@ -196,6 +297,37 @@
                     </div>
                   ))}
                 </div>
+
+                {/* THE FIX: My Requests panel — only for Buyers, and only shown once myRequests.length > 0, so it
+                    never appears empty for a brand-new user */}
+                {myRequests.length > 0 && (
+                  <>
+                    <div className="section-header">
+                      <h2 className="section-title">My Requests</h2>
+                    </div>
+                    <div className="listing-list">
+                      {myRequests.map((req) => (
+                        <div className="listing-row" key={req.id}>
+                          <div className="listing-row-main">
+                            <h3 className="listing-title">{req.title}</h3>
+                            <p className="listing-meta">{req.provider}</p>
+                          </div>
+                          <span className={`status-pill ${req.status === 'active' ? 'status-active' : 'status-waiting'}`}>
+                            {req.status === 'active' ? 'Active' : 'Waiting'}
+                          </span>
+                          {req.status === 'waiting' ? (
+                            <>
+                              <button className="request-btn" onClick={() => handleApproveRequest(req.id)}>Simulate Approval</button>
+                              <button className="cancel-btn" onClick={() => handleEndRequest(req.id)}>Cancel</button>
+                            </>
+                          ) : (
+                            <button className="request-btn" onClick={() => handleEndRequest(req.id)}>Mark Complete</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -205,19 +337,80 @@
                   <h2 className="section-title">Your Listings</h2>
                   <button className="post-request-btn">+ Add Listing</button>
                 </div>
-                <div className="listing-list">
-                  {mockListings.map((listing) => (
+                                <div className="listing-list">
+                  {listings.map((listing) => (
                     <div className="listing-row" key={listing.id}>
-                      <div className="listing-row-main">
-                        <h3 className="listing-title">{listing.title}</h3>
-                        <p className="listing-meta">{listing.views} views</p>
-                      </div>
-                      <span className={`status-pill ${listing.status === 'Active' ? 'status-active' : 'status-paused'}`}>
-                        {listing.status}
-                      </span>
-                      <span className="listing-price">{listing.price}</span>
+                      {editingListingId === listing.id ? (
+                        // THE FIX: Inline edit mode — swaps the row's display text for editable inputs, exactly
+                        // what "edit it and its classification" asked for, with no separate modal file needed
+                        <>
+                          <div className="listing-row-main">
+                            <input
+                              type="text"
+                              className="custom-input edit-input"
+                              value={editDraft.title}
+                              onChange={(e) => setEditDraft((prev) => ({ ...prev, title: e.target.value }))}
+                            />
+                                                        {/* THE FIX: Swapped the plain dropdown for a text input paired with a <datalist> — the
+                                browser automatically filters this suggestion list as the user types, giving free
+                                built-in search with no custom filtering logic needed */}
+                            <input
+                              type="text"
+                              list="classification-options"
+                              className="custom-input edit-input"
+                              placeholder="Search classification..."
+                              value={editDraft.classification}
+                              onChange={(e) => setEditDraft((prev) => ({ ...prev, classification: e.target.value }))}
+                            />
+                            <datalist id="classification-options">
+                              {ALL_CLASSIFICATIONS.map((option) => (
+                                <option value={option} key={option} />
+                              ))}
+                            </datalist>
+                          </div>
+                          <button className="request-btn" onClick={() => handleSaveEdit(listing.id)}>Save</button>
+                          <button className="cancel-btn" onClick={handleCancelEdit}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="listing-row-main">
+                            <h3 className="listing-title">{listing.title}</h3>
+                            <p className="listing-meta">{listing.classification} · {listing.views} views</p>
+                          </div>
+                          <span className={`status-pill ${listing.status === 'Active' ? 'status-active' : 'status-paused'}`}>
+                            {listing.status}
+                          </span>
+                          <span className="listing-price">{listing.price}</span>
+                          <button className="edit-btn" onClick={() => handleStartEdit(listing)} title="Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+                          </button>
+                          <button className="delete-btn" onClick={() => handleDeleteListing(listing.id)} title="Delete">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
+                </div>
+
+                {/* THE FIX: Shows Buyer requests matching THIS Seller's own onboarding classification(s) — see the
+                    assumption I flagged above the code */}
+                <div className="section-header">
+                  <h2 className="section-title">Requests Matching Your Categories</h2>
+                </div>
+                <div className="listing-list">
+                  {visibleBuyerRequests
+                    .filter((req) => (currentUser.classifications || []).includes(req.classification))
+                    .map((req) => (
+                      <div className="listing-row" key={req.id}>
+                        <div className="listing-row-main">
+                          <h3 className="listing-title">{req.title}</h3>
+                          <p className="listing-meta">{req.classification} · Posted by {req.postedBy}</p>
+                        </div>
+                        <span className="listing-price">{req.budget}</span>
+                        <button className="request-btn">Offer to Help</button>
+                      </div>
+                    ))}
                 </div>
               </>
             )}
