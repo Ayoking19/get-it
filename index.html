@@ -39,6 +39,63 @@
       'Beauty Products', 'Toys'
     ].sort();
 
+    // THE FIX: Flip this to false once the real backend exists. Every Api function below will then call the real
+    // endpoint instead of its mock branch — nothing outside this Api object needs to change when that happens
+    const USE_MOCK_DATA = true;
+    const API_BASE = 'https://getit.socialappwebsite.me/api';
+
+    // THE FIX: setTimeout has no built-in Promise support, so this helper wraps it in one. It simulates real
+    // network latency in mock mode, so loading states are actually visible and testable right now instead of
+    // resolving instantly and hiding bugs that would only show up once a real, slower network call is involved
+    const mockDelay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    // THE FIX: The API layer. Every function returns a Promise with the exact same shape whether it's running in
+    // mock mode or hitting a real endpoint, so the rest of this file never needs to know or care which one is happening
+    const Api = {
+      // THE FIX: Checks whether this Google account has already completed onboarding for the selected role
+      checkUser: async (role) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          const existing = localStorage.getItem(`registered_${role}`);
+          return existing ? JSON.parse(existing) : null;
+        }
+        const res = await fetch(`${API_BASE}/users/exists?role=${role}`, { credentials: 'include' });
+        if (!res.ok) return null;
+        return res.json();
+      },
+
+      // THE FIX: Saves a brand-new user record from the onboarding form
+      registerUser: async (userRecord) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          const serialized = JSON.stringify(userRecord);
+          localStorage.setItem(`registered_${userRecord.role}`, serialized);
+          localStorage.setItem('currentUser', serialized);
+          return userRecord;
+        }
+        const res = await fetch(`${API_BASE}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(userRecord)
+        });
+        if (!res.ok) throw new Error('Registration failed');
+        return res.json();
+      },
+
+      // THE FIX: Marks an already-registered user as the active session — used when they skip onboarding entirely
+      startSession: async (userRecord) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay(200);
+          localStorage.setItem('currentUser', JSON.stringify(userRecord));
+          return userRecord;
+        }
+        const res = await fetch(`${API_BASE}/auth/session`, { method: 'POST', credentials: 'include' });
+        if (!res.ok) throw new Error('Could not start session');
+        return res.json();
+      }
+    };
+
     const LoginPage = () => {
       const [selectedRole, setSelectedRole] = useState('buyer');
       // THE FIX: Added authStage to track whether the user is viewing the login button or the PII onboarding form
@@ -120,13 +177,13 @@
                 // THE FIX: profile now contains { name, email, picture, ... } straight from Google, no more hardcoded text
                 setGoogleProfile(profile);
 
-                // THE FIX: Using Local Storage to check if this specific role is already registered.
-                const existingRecord = localStorage.getItem(`registered_${selectedRole}`);
+                // THE FIX: Now routed through the Api layer instead of reading Local Storage directly. In mock
+                // mode this still reads Local Storage internally, but this code no longer knows or cares — it just
+                // awaits a Promise and gets back a user record or null, exactly like a real backend call would
+                const existingRecord = await Api.checkUser(selectedRole);
 
                 if (existingRecord) {
-                  // THE FIX: If a record exists for this role, save it as the active session under a separate "currentUser" key,
-                  // so home.html knows who is logged in right now
-                  localStorage.setItem('currentUser', existingRecord);
+                  await Api.startSession(existingRecord);
                   window.location.href = "home.html";
                 } else {
                   // THE FIX: If no record exists for this role, show the onboarding form to collect the rest of their profile
@@ -148,12 +205,14 @@
         }
       };
 
-            const handleOnboardingSubmit = (e) => {
+                  // THE FIX: Now "async" so it can await the Api call below, instead of writing directly to Local Storage
+      const handleOnboardingSubmit = async (e) => {
         e.preventDefault();
+        setIsAuthenticating(true);
 
-        // THE FIX: Combine the real Google profile with everything the user typed, plus the selected role, into one record —
-        // this is the exact object that will later be sent to the PostgreSQL backend once it exists
-                const userRecord = {
+        // THE FIX: Combine the real Google profile with everything the user typed, plus the selected role, into one
+        // record — the exact object that gets sent to the real backend once it exists
+        const userRecord = {
           ...formData,
           role: selectedRole,
           providerType: selectedRole === 'seller' ? providerType : '',
@@ -162,13 +221,13 @@
           googlePicture: googleProfile ? googleProfile.picture : ''
         };
 
-        const serializedRecord = JSON.stringify(userRecord);
-
-        // THE FIX: "registered_<role>" is the permanent record; "currentUser" is the active session home.html reads from
-        localStorage.setItem(`registered_${selectedRole}`, serializedRecord);
-        localStorage.setItem('currentUser', serializedRecord);
-
-        window.location.href = "home.html";
+        try {
+          await Api.registerUser(userRecord);
+          window.location.href = "home.html";
+        } catch (error) {
+          alert("We couldn't save your profile. Please check your connection and try again.");
+          setIsAuthenticating(false);
+        }
       }
 
       return (
@@ -360,8 +419,12 @@
                     </div>
                   )}
 
-                  <button type="submit" className="google-sso-btn continue-btn">
-                    <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>Complete Profile</span>
+                  {/* THE FIX: Reuses the same isAuthenticating state already used by the Google button, so the form
+                      shows "Saving..." and disables itself while Api.registerUser() is in flight */}
+                  <button type="submit" className="google-sso-btn continue-btn" disabled={isAuthenticating}>
+                    <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>
+                      {isAuthenticating ? 'Saving...' : 'Complete Profile'}
+                    </span>
                   </button>
                 </form>
               </>

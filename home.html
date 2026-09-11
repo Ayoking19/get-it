@@ -17,14 +17,38 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    // THE FIX: Flip this to false once the real backend exists. Every Api function below will then call the real
+    // endpoint instead of its mock branch — nothing outside this Api object needs to change
+    const USE_MOCK_DATA = true;
+    const API_BASE = 'https://getit.socialappwebsite.me/api';
+
+    const mockDelay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const ALL_CLASSIFICATIONS = [
+      'Furniture', 'Mechanical Engineering', 'Electrical Engineering', 'Cook', 'Plumbing',
+      'Entertainment', 'Electronic Devices', 'Health Expert', 'Gym', 'Graphic Design',
+      'Web Development', 'Photography', 'Tutoring', 'Event Planning', 'Beauty & Salon',
+      'Auto Repair', 'Tailoring', 'Cleaning Services', 'Painting', 'Food', 'Clothing',
+      'Electronics', 'Cars', 'Houses', 'Watches', 'Cooking Utensils', 'Transport',
+      'Books', 'Jewelry', 'Sports Equipment', 'Beauty Products', 'Toys', 'Appliances'
+    ].sort();
+
+    const shuffleArray = (array) => {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+
+    // THE FIX: Read-only reference data — nobody edits their distance or delivery fee from the frontend, so these
+    // stay as plain constants, served as-is by Api.getNearbyServices() / Api.getDeliveries() below
     const mockNearbyServices = [
-      { 
-        id: 1, providerName: 'Adaeze Okafor', category: 'Plumbing Repair', rating: 4.9, price: '₦8,500', distance: '1.2km away', 
+      { id: 1, providerName: 'Adaeze Okafor', category: 'Plumbing Repair', rating: 4.9, price: '₦8,500', distance: '1.2km away', 
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#94a3b8"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.5 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg> 
       },
-      { 
-        id: 2, providerName: 'Chidi Emeka', category: 'AC Installation', rating: 4.7, price: '₦25,000', distance: '2.4km away', 
-        /* THE FIX: A perfectly symmetrical snowflake built with geometric intersecting lines */
+      { id: 2, providerName: 'Chidi Emeka', category: 'AC Installation', rating: 4.7, price: '₦25,000', distance: '2.4km away', 
         icon: (
           <svg width="24" height="24" viewBox="0 0 24 24" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="2" x2="12" y2="22" />
@@ -38,9 +62,7 @@
           </svg>
         )
       },
-      { 
-        id: 3, providerName: 'Fatima Sule', category: 'House Cleaning', rating: 5.0, price: '₦6,000', distance: '0.8km away', 
-        /* THE FIX: A classic, unmistakable sweeping broom with transparent cutouts to simulate bristles */
+      { id: 3, providerName: 'Fatima Sule', category: 'House Cleaning', rating: 5.0, price: '₦6,000', distance: '0.8km away', 
         icon: (
           <svg width="24" height="24" viewBox="0 0 24 24">
             <line x1="19" y1="5" x2="11" y2="13" stroke="#d97706" strokeWidth="3" strokeLinecap="round" />
@@ -51,58 +73,15 @@
           </svg>
         )
       },
-      { 
-        id: 4, providerName: 'Tunde Bakare', category: 'Electrical Wiring', rating: 4.8, price: '₦12,000', distance: '3.1km away', 
+      { id: 4, providerName: 'Tunde Bakare', category: 'Electrical Wiring', rating: 4.8, price: '₦12,000', distance: '3.1km away', 
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#facc15"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg> 
       },
-      { 
-        id: 5, providerName: 'Ngozi Umeh', category: 'Furniture Assembly', rating: 4.6, price: '₦7,500', distance: '1.9km away', 
+      { id: 5, providerName: 'Ngozi Umeh', category: 'Furniture Assembly', rating: 4.6, price: '₦7,500', distance: '1.9km away', 
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#b45309"><path d="M4 18v3h3v-3h10v3h3v-6H4v3zm15-8h3v3h-3v-3zM2 10h3v3H2v-3zm15 3H7V5c0-1.1.9-2 2-2h6c1.1 0 2 .9 2 2v8z"/></svg> 
       },
-      { 
-        id: 6, providerName: 'Emeka Obi', category: 'Painting Services', rating: 4.9, price: '₦18,000', distance: '2.7km away', 
+      { id: 6, providerName: 'Emeka Obi', category: 'Painting Services', rating: 4.9, price: '₦18,000', distance: '2.7km away', 
         icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="#ec4899"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.09-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 8 6.5 8 8 8.67 8 9.5 7.33 11 6.5 11zm3-4C8.67 7 8 6.33 8 5.5S8.67 4 9.5 4 11 4.67 11 5.5 10.33 7 9.5 7zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 4 14.5 4 16 4.67 16 5.5 15.33 7 14.5 7zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 8 17.5 8 19 8.67 19 9.5 18.33 11 17.5 11z"/></svg> 
       }
-    ];
-
-        // THE FIX: Combined classification list, used anywhere ONE classification needs to be chosen. Appended .sort()
-    // guarantees this stays alphabetically ordered forever, even if someone adds a new category to the end of this
-    // list later without thinking about where it belongs alphabetically
-    const ALL_CLASSIFICATIONS = [
-      'Furniture', 'Mechanical Engineering', 'Electrical Engineering', 'Cook', 'Plumbing',
-      'Entertainment', 'Electronic Devices', 'Health Expert', 'Gym', 'Graphic Design',
-      'Web Development', 'Photography', 'Tutoring', 'Event Planning', 'Beauty & Salon',
-      'Auto Repair', 'Tailoring', 'Cleaning Services', 'Painting', 'Food', 'Clothing',
-      'Electronics', 'Cars', 'Houses', 'Watches', 'Cooking Utensils', 'Transport',
-      'Books', 'Jewelry', 'Sports Equipment', 'Beauty Products', 'Toys', 'Appliances'
-    ].sort();
-
-    // THE FIX: The Fisher-Yates shuffle algorithm — a standard way to randomly reorder an array. This simulates
-    // "requests shown should change any time the page refreshes." With a real backend, a fresh database query would
-    // do this naturally; on mock data, shuffling the order on each load gives the same visual effect
-    const shuffleArray = (array) => {
-      const copy = [...array];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    };
-
-    // THE FIX: Added a "classification" field — each listing belongs to exactly ONE classification
-    const mockListings = [
-      { id: 1, title: 'Professional Plumbing Repair', price: '₦8,500', views: 142, status: 'Active', classification: 'Plumbing' },
-      { id: 2, title: 'Emergency Pipe Fitting', price: '₦15,000', views: 87, status: 'Active', classification: 'Plumbing' },
-      { id: 3, title: 'Water Heater Installation', price: '₦22,000', views: 34, status: 'Paused', classification: 'Plumbing' }
-    ];
-
-    // THE FIX: New mock data — Buyer request posts, each with exactly one classification. This is what a Seller
-    // browses to find work matching their own onboarding classification(s)
-    const mockBuyerRequests = [
-      { id: 101, title: 'Need a plumber to fix a leaking kitchen sink', classification: 'Plumbing', budget: '₦7,000', postedBy: 'Kunle A.' },
-      { id: 102, title: 'Looking for someone to assemble 2 wardrobes', classification: 'Furniture', budget: '₦6,000', postedBy: 'Ifeoma N.' },
-      { id: 103, title: 'Need a graphic designer for a logo redesign', classification: 'Graphic Design', budget: '₦20,000', postedBy: 'Segun O.' },
-      { id: 104, title: 'Looking for a caterer for a small event', classification: 'Cook', budget: '₦30,000', postedBy: 'Ada E.' }
     ];
 
     const mockDeliveries = [
@@ -111,45 +90,243 @@
       { id: 3, pickup: 'Lekki Phase 1', dropoff: 'Victoria Island', fee: '₦2,800', distance: '7.9km', status: 'Available' }
     ];
 
-            // THE FIX: Removed the payment notification entirely — payments happen via each user's own bank app, outside
-    // this platform, so the app has no reason to announce one. Notifications are now scoped to exactly two kinds
-    // of events: request status changes and messages
-    const mockNotifications = [
-      { id: 1, text: 'Adaeze Okafor accepted your service request', time: '10 minutes ago' },
-      { id: 2, text: 'New message from Chidi Emeka', time: '1 hour ago' },
-      { id: 3, text: 'Your plumbing request was seen by 2 providers nearby', time: '2 hours ago' }
-    ];
+    // THE FIX: This object simulates the "backend + database" combined, entirely in mock mode. It lives in module
+    // scope (outside the component) so it persists for the whole page session, the same way a real database would
+    // persist between requests — this is the ONLY section that gets deleted once the real backend exists
+    let mockDb = {
+      listings: [
+        { id: 1, title: 'Professional Plumbing Repair', price: '₦8,500', views: 142, status: 'Active', classification: 'Plumbing' },
+        { id: 2, title: 'Emergency Pipe Fitting', price: '₦15,000', views: 87, status: 'Active', classification: 'Plumbing' },
+        { id: 3, title: 'Water Heater Installation', price: '₦22,000', views: 34, status: 'Paused', classification: 'Plumbing' }
+      ],
+      buyerRequests: [
+        { id: 101, title: 'Need a plumber to fix a leaking kitchen sink', classification: 'Plumbing', budget: '₦7,000', postedBy: 'Kunle A.' },
+        { id: 102, title: 'Looking for someone to assemble 2 wardrobes', classification: 'Furniture', budget: '₦6,000', postedBy: 'Ifeoma N.' },
+        { id: 103, title: 'Need a graphic designer for a logo redesign', classification: 'Graphic Design', budget: '₦20,000', postedBy: 'Segun O.' },
+        { id: 104, title: 'Looking for a caterer for a small event', classification: 'Cook', budget: '₦30,000', postedBy: 'Ada E.' }
+      ],
+      notifications: [
+        { id: 1, text: 'Adaeze Okafor accepted your service request', time: '10 minutes ago' },
+        { id: 2, text: 'New message from Chidi Emeka', time: '1 hour ago' },
+        { id: 3, text: 'Your plumbing request was seen by 2 providers nearby', time: '2 hours ago' }
+      ],
+      requests: []
+    };
 
-        const Dashboard = () => {
-      const [currentUser, setCurrentUser] = useState(null);
-      // THE FIX: listings is now REAL React state, not the raw mockListings constant, so a Seller's edits and
-      // deletions actually update what's rendered
-      const [listings, setListings] = useState(mockListings);
-      // THE FIX: The id of whichever listing is currently in edit mode; null means nothing is being edited
-      const [editingListingId, setEditingListingId] = useState(null);
-      // THE FIX: Holds in-progress edited values separately from the real listings array, so clicking Cancel
-      // doesn't leave half-typed changes behind
-      const [editDraft, setEditDraft] = useState({ title: '', classification: '' });
-      // THE FIX: A Buyer's own requests. "Request" on a service card adds an entry with status 'waiting'; demo
-      // controls move it to 'active'; completing or cancelling removes it entirely
-      const [myRequests, setMyRequests] = useState([]);
-      // THE FIX: useState's lazy initializer (the () => ... form) runs only on the very first render, not on every
-      // re-render — this is what makes a Seller's matching-requests list reorder itself on every page refresh
-      const [visibleBuyerRequests] = useState(() => shuffleArray(mockBuyerRequests));
+    // THE FIX: The API layer. Every function returns a Promise with the exact same shape whether in mock mode or
+    // hitting a real endpoint. Components below only ever call these — never localStorage or a mock array directly
+    const Api = {
+      getCurrentUser: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay(300);
+          const stored = localStorage.getItem('currentUser');
+          if (!stored) throw new Error('Not logged in');
+          return JSON.parse(stored);
+        }
+        const res = await fetch(`${API_BASE}/me`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Not logged in');
+        return res.json();
+      },
 
-      useEffect(() => {
-        const storedUser = localStorage.getItem('currentUser');
-
-        if (!storedUser) {
-          window.location.href = "index.html";
+      logout: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay(150);
+          localStorage.removeItem('currentUser');
           return;
         }
+        await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+      },
 
-        setCurrentUser(JSON.parse(storedUser));
+      getNearbyServices: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          return mockNearbyServices;
+        }
+        const res = await fetch(`${API_BASE}/services`, { credentials: 'include' });
+        return res.json();
+      },
+
+      getDeliveries: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          return mockDeliveries;
+        }
+        const res = await fetch(`${API_BASE}/deliveries`, { credentials: 'include' });
+        return res.json();
+      },
+
+      getListings: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          return mockDb.listings;
+        }
+        const res = await fetch(`${API_BASE}/listings`, { credentials: 'include' });
+        return res.json();
+      },
+
+      updateListing: async (id, changes) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          mockDb.listings = mockDb.listings.map((item) => (item.id === id ? { ...item, ...changes } : item));
+          return mockDb.listings.find((item) => item.id === id);
+        }
+        const res = await fetch(`${API_BASE}/listings/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(changes)
+        });
+        if (!res.ok) throw new Error('Update failed');
+        return res.json();
+      },
+
+      deleteListing: async (id) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          mockDb.listings = mockDb.listings.filter((item) => item.id !== id);
+          return;
+        }
+        const res = await fetch(`${API_BASE}/listings/${id}`, { method: 'DELETE', credentials: 'include' });
+        if (!res.ok) throw new Error('Delete failed');
+      },
+
+      getMatchingRequests: async (classifications) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          return shuffleArray(mockDb.buyerRequests).filter((req) => classifications.includes(req.classification));
+        }
+        const query = classifications.map((c) => `classifications[]=${encodeURIComponent(c)}`).join('&');
+        const res = await fetch(`${API_BASE}/requests/matching?${query}`, { credentials: 'include' });
+        return res.json();
+      },
+
+      getMyRequests: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          return mockDb.requests;
+        }
+        const res = await fetch(`${API_BASE}/requests/mine`, { credentials: 'include' });
+        return res.json();
+      },
+
+      sendRequest: async (service) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          const newRequest = { id: Date.now(), sourceId: service.id, title: service.category, provider: service.providerName, status: 'waiting' };
+          mockDb.requests = [...mockDb.requests, newRequest];
+          return newRequest;
+        }
+        const res = await fetch(`${API_BASE}/requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ listingId: service.id })
+        });
+        if (!res.ok) throw new Error('Request failed');
+        return res.json();
+      },
+
+      // THE FIX: In mock mode this simulates the OTHER party approving. Once the real backend exists, this
+      // function is called from THEIR account, not the Buyer's — nothing about calling it from here changes
+      updateRequestStatus: async (id, status) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          mockDb.requests = mockDb.requests.map((req) => (req.id === id ? { ...req, status } : req));
+          return mockDb.requests.find((req) => req.id === id);
+        }
+        const res = await fetch(`${API_BASE}/requests/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status })
+        });
+        if (!res.ok) throw new Error('Update failed');
+        return res.json();
+      },
+
+      endRequest: async (id) => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          mockDb.requests = mockDb.requests.filter((req) => req.id !== id);
+          return;
+        }
+        const res = await fetch(`${API_BASE}/requests/${id}`, { method: 'DELETE', credentials: 'include' });
+        if (!res.ok) throw new Error('Update failed');
+      },
+
+      getNotifications: async () => {
+        if (USE_MOCK_DATA) {
+          await mockDelay();
+          return mockDb.notifications;
+        }
+        const res = await fetch(`${API_BASE}/notifications`, { credentials: 'include' });
+        return res.json();
+      }
+    };
+
+    const Dashboard = () => {
+      const [currentUser, setCurrentUser] = useState(null);
+      const [isLoadingPage, setIsLoadingPage] = useState(true);
+
+      const [listings, setListings] = useState([]);
+      const [nearbyServices, setNearbyServices] = useState([]);
+      const [matchingRequests, setMatchingRequests] = useState([]);
+      const [deliveries, setDeliveries] = useState([]);
+      const [notifications, setNotifications] = useState([]);
+      const [myRequests, setMyRequests] = useState([]);
+
+      const [editingListingId, setEditingListingId] = useState(null);
+      const [editDraft, setEditDraft] = useState({ title: '', classification: '' });
+
+      // THE FIX: Runs once on mount. First fetches the logged-in user; if that fails (no valid session), it
+      // redirects to index.html — this IS the new route guard, replacing the old direct Local Storage check.
+      // If it succeeds, Promise.all fetches every piece of role-relevant content AT THE SAME TIME rather than
+      // one after another, so the page loads as fast as possible instead of waiting on each request in sequence
+      useEffect(() => {
+        const loadDashboard = async () => {
+          try {
+            const user = await Api.getCurrentUser();
+            setCurrentUser(user);
+
+            if (user.role === 'buyer') {
+              const [services, myReqs, notifs] = await Promise.all([
+                Api.getNearbyServices(),
+                Api.getMyRequests(),
+                Api.getNotifications()
+              ]);
+              setNearbyServices(services);
+              setMyRequests(myReqs);
+              setNotifications(notifs);
+            } else if (user.role === 'seller') {
+              const [ownListings, matching, notifs] = await Promise.all([
+                Api.getListings(),
+                Api.getMatchingRequests(user.classifications || []),
+                Api.getNotifications()
+              ]);
+              setListings(ownListings);
+              setMatchingRequests(matching);
+              setNotifications(notifs);
+            } else if (user.role === 'courier') {
+              const [jobs, notifs] = await Promise.all([
+                Api.getDeliveries(),
+                Api.getNotifications()
+              ]);
+              setDeliveries(jobs);
+              setNotifications(notifs);
+            }
+          } catch (error) {
+            window.location.href = "index.html";
+            return;
+          } finally {
+            setIsLoadingPage(false);
+          }
+        };
+
+        loadDashboard();
       }, []);
 
-            const handleLogout = () => {
-        localStorage.removeItem('currentUser');
+      const handleLogout = async () => {
+        await Api.logout();
         window.location.href = "index.html";
       };
 
@@ -158,51 +335,62 @@
         setEditDraft({ title: listing.title, classification: listing.classification });
       };
 
-      // THE FIX: .map() rebuilds the array, keeping every listing as-is EXCEPT the one being edited, which gets
-      // its title and classification overwritten with editDraft's values
-      const handleSaveEdit = (id) => {
-        setListings((prevListings) =>
-          prevListings.map((item) => (item.id === id ? { ...item, ...editDraft } : item))
-        );
-        setEditingListingId(null);
+      const handleSaveEdit = async (id) => {
+        try {
+          const updated = await Api.updateListing(id, editDraft);
+          setListings((prev) => prev.map((item) => (item.id === id ? updated : item)));
+          setEditingListingId(null);
+        } catch (error) {
+          alert('Could not save changes. Please try again.');
+        }
       };
 
       const handleCancelEdit = () => {
         setEditingListingId(null);
       };
 
-      // THE FIX: .filter() rebuilds the array containing every listing EXCEPT the deleted one
-      const handleDeleteListing = (id) => {
-        setListings((prevListings) => prevListings.filter((item) => item.id !== id));
+      const handleDeleteListing = async (id) => {
+        try {
+          await Api.deleteListing(id);
+          setListings((prev) => prev.filter((item) => item.id !== id));
+        } catch (error) {
+          alert('Could not delete this listing. Please try again.');
+        }
       };
 
-      // THE FIX: .some() checks whether this exact service has already been requested, preventing duplicates
-      const handleSendRequest = (service) => {
+      const handleSendRequest = async (service) => {
         const alreadyRequested = myRequests.some((req) => req.sourceId === service.id);
         if (alreadyRequested) return;
 
-        setMyRequests((prevRequests) => [
-          ...prevRequests,
-          { id: Date.now(), sourceId: service.id, title: service.category, provider: service.providerName, status: 'waiting' }
-        ]);
+        try {
+          const newRequest = await Api.sendRequest(service);
+          setMyRequests((prev) => [...prev, newRequest]);
+        } catch (error) {
+          alert('Could not send your request. Please try again.');
+        }
       };
 
-      // THE FIX: Demo-only control simulating the OTHER party (the provider) approving the request. Once the real
-      // backend exists, this state change is triggered by the provider's own account — a Buyer never clicks this
-      // themselves in the finished app
-      const handleApproveRequest = (id) => {
-        setMyRequests((prevRequests) =>
-          prevRequests.map((req) => (req.id === id ? { ...req, status: 'active' } : req))
-        );
+      const handleApproveRequest = async (id) => {
+        try {
+          const updated = await Api.updateRequestStatus(id, 'active');
+          setMyRequests((prev) => prev.map((req) => (req.id === id ? updated : req)));
+        } catch (error) {
+          alert('Could not update this request. Please try again.');
+        }
       };
 
-      // THE FIX: Completing OR cancelling both remove the entry from myRequests — that's what "goes back to normal
-      // like before any request was made" means here: it disappears from view, and the original card is requestable again
-      const handleEndRequest = (id) => {
-        setMyRequests((prevRequests) => prevRequests.filter((req) => req.id !== id));
+      const handleEndRequest = async (id) => {
+        try {
+          await Api.endRequest(id);
+          setMyRequests((prev) => prev.filter((req) => req.id !== id));
+        } catch (error) {
+          alert('Could not update this request. Please try again.');
+        }
       };
 
-      if (!currentUser) {
+      // THE FIX: Single loading gate for the whole page. currentUser being null AND isLoadingPage being true
+      // covers the exact same case your old "if (!currentUser)" check did, just now driven by a real async fetch
+      if (isLoadingPage || !currentUser) {
         return (
           <div className="layout-wrapper">
             <p style={{ color: '#94a3b8' }}>Loading your workspace...</p>
@@ -254,10 +442,8 @@
                   <div className="stat-item"><span className="stat-number">4.8</span><span className="stat-label">Avg. Rating Given</span></div>
                 </>
               )}
-                            {currentUser.role === 'seller' && (
+              {currentUser.role === 'seller' && (
                 <>
-                  {/* THE FIX: Removed the "This Month" earnings stat entirely — the platform never handles payment
-                      amounts, so it has no accurate figure to show here anyway */}
                   <div className="stat-item"><span className="stat-number">3</span><span className="stat-label">Active Listings</span></div>
                   <div className="stat-item"><span className="stat-number">263</span><span className="stat-label">Total Views</span></div>
                 </>
@@ -278,7 +464,7 @@
                   <button className="post-request-btn">+ Post a Request</button>
                 </div>
                 <div className="service-grid">
-                  {mockNearbyServices.map((service) => (
+                  {nearbyServices.map((service) => (
                     <div className="service-card" key={service.id}>
                       <div className="service-card-icon">{service.icon}</div>
                       <h3 className="service-card-title">{service.category}</h3>
@@ -292,14 +478,18 @@
                       </div>
                       <div className="service-card-footer">
                         <span className="service-price">{service.price}</span>
-                        <button className="request-btn">Request</button>
+                        <button
+                          className="request-btn"
+                          disabled={myRequests.some((req) => req.sourceId === service.id)}
+                          onClick={() => handleSendRequest(service)}
+                        >
+                          {myRequests.some((req) => req.sourceId === service.id) ? 'Requested' : 'Request'}
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* THE FIX: My Requests panel — only for Buyers, and only shown once myRequests.length > 0, so it
-                    never appears empty for a brand-new user */}
                 {myRequests.length > 0 && (
                   <>
                     <div className="section-header">
@@ -337,12 +527,10 @@
                   <h2 className="section-title">Your Listings</h2>
                   <button className="post-request-btn">+ Add Listing</button>
                 </div>
-                                <div className="listing-list">
+                <div className="listing-list">
                   {listings.map((listing) => (
                     <div className="listing-row" key={listing.id}>
                       {editingListingId === listing.id ? (
-                        // THE FIX: Inline edit mode — swaps the row's display text for editable inputs, exactly
-                        // what "edit it and its classification" asked for, with no separate modal file needed
                         <>
                           <div className="listing-row-main">
                             <input
@@ -351,9 +539,6 @@
                               value={editDraft.title}
                               onChange={(e) => setEditDraft((prev) => ({ ...prev, title: e.target.value }))}
                             />
-                                                        {/* THE FIX: Swapped the plain dropdown for a text input paired with a <datalist> — the
-                                browser automatically filters this suggestion list as the user types, giving free
-                                built-in search with no custom filtering logic needed */}
                             <input
                               type="text"
                               list="classification-options"
@@ -393,24 +578,20 @@
                   ))}
                 </div>
 
-                {/* THE FIX: Shows Buyer requests matching THIS Seller's own onboarding classification(s) — see the
-                    assumption I flagged above the code */}
                 <div className="section-header">
                   <h2 className="section-title">Requests Matching Your Categories</h2>
                 </div>
                 <div className="listing-list">
-                  {visibleBuyerRequests
-                    .filter((req) => (currentUser.classifications || []).includes(req.classification))
-                    .map((req) => (
-                      <div className="listing-row" key={req.id}>
-                        <div className="listing-row-main">
-                          <h3 className="listing-title">{req.title}</h3>
-                          <p className="listing-meta">{req.classification} · Posted by {req.postedBy}</p>
-                        </div>
-                        <span className="listing-price">{req.budget}</span>
-                        <button className="request-btn">Offer to Help</button>
+                  {matchingRequests.map((req) => (
+                    <div className="listing-row" key={req.id}>
+                      <div className="listing-row-main">
+                        <h3 className="listing-title">{req.title}</h3>
+                        <p className="listing-meta">{req.classification} · Posted by {req.postedBy}</p>
                       </div>
-                    ))}
+                      <span className="listing-price">{req.budget}</span>
+                      <button className="request-btn">Offer to Help</button>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -421,7 +602,7 @@
                   <h2 className="section-title">Available Deliveries</h2>
                 </div>
                 <div className="listing-list">
-                  {mockDeliveries.map((job) => (
+                  {deliveries.map((job) => (
                     <div className="listing-row" key={job.id}>
                       <div className="listing-row-main">
                         <h3 className="listing-title">{job.pickup} → {job.dropoff}</h3>
@@ -439,7 +620,7 @@
               <h2 className="section-title">Recent Notifications</h2>
             </div>
             <div className="notification-list">
-              {mockNotifications.map((note) => (
+              {notifications.map((note) => (
                 <div className="notification-row" key={note.id}>
                   <p className="notification-text">{note.text}</p>
                   <span className="notification-time">{note.time}</span>

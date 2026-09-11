@@ -793,3 +793,215 @@
   font-size: 13px;
   margin-bottom: 6px;
 }
+
+/* ============================================= */
+/* FULL MOBILE RESPONSIVENESS PASS                */
+/* ============================================= */
+
+/* THE FIX: A safety net against horizontal scrolling. If any single element anywhere on the page miscalculates
+   its width on a very narrow screen, this stops the WHOLE PAGE from becoming side-scrollable — one of the most
+   common ways a "responsive" site quietly breaks in the real world */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* THE FIX: min-width: 0 fixes a well-known Flexbox bug — by default, a flex child won't shrink smaller than its
+   own content's natural width. That's why a long email address can silently push a button wider than its
+   container. Setting min-width: 0 lets it shrink and truncate properly instead */
+.btn-text-group {
+  min-width: 0;
+}
+
+.primary-text, .secondary-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 480px) {
+  /* Login / onboarding */
+  .toggle-btn {
+    font-size: 12px;
+    padding: 8px 0;
+  }
+
+  .google-sso-btn {
+    padding: 6px 16px 6px 6px;
+  }
+
+  .user-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .onboarding-form {
+    gap: 12px;
+  }
+
+  .custom-input {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+
+  /* THE FIX: Below 480px, a single-column checkbox list is far easier to scan than a cramped 2-column grid */
+  .classification-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Home page shell */
+  .navbar {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .nav-links {
+    gap: 8px;
+  }
+
+  .nav-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nav-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .home-content {
+    padding: 20px 14px 40px;
+  }
+
+  .home-greeting {
+    font-size: 20px;
+  }
+
+  .home-subgreeting {
+    font-size: 13px;
+  }
+
+  .role-badge {
+    align-self: flex-start;
+    font-size: 11px;
+    padding: 6px 14px;
+  }
+
+  /* THE FIX: Three stats side-by-side get too cramped to read below this width — a clean 2-column grid is far
+     more legible than three squeezed-together flex columns fighting for space */
+  .stats-glass-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 18px;
+  }
+
+  .stat-number {
+    font-size: 20px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .post-request-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  /* THE FIX: A single column of service cards is more usable on a small phone than two narrow, cramped cards
+     fighting for space side by side */
+  .service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* THE FIX: This is the core fix for Seller listings, Courier jobs, and My Requests. Below 480px, the row
+     switches from a horizontal line to a stacked column, so the title, price, status pill, and action buttons
+     each get their own full-width line instead of squeezing into one cramped row */
+  .listing-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .listing-row-main {
+    min-width: 0;
+  }
+
+  .listing-price {
+    align-self: flex-start;
+  }
+
+  /* THE FIX: Buttons inside a stacked row grow to fill the full width, giving a comfortably large, easy-to-tap
+     target instead of a small inline button that's easy to miss with a thumb */
+  .listing-row .request-btn,
+  .listing-row .cancel-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .listing-row .edit-btn,
+  .listing-row .delete-btn {
+    align-self: flex-end;
+  }
+
+  .edit-input {
+    width: 100%;
+  }
+
+  .notification-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .logout-btn {
+    width: 100%;
+    margin-top: 32px;
+  }
+}
+
+/* THE FIX: An extra tier specifically for genuinely small phones (roughly 320px–360px wide, like an iPhone SE or
+   older/budget Android devices) — where even the 480px adjustments above still feel slightly tight */
+@media screen and (max-width: 360px) {
+  .auth-card {
+    padding: 24px 16px;
+  }
+
+  .brand-title {
+    font-size: 24px;
+  }
+
+  /* THE FIX: A CSS rule targeting width/height overrides the SVG's own width/height HTML attributes, so this
+     correctly shrinks the logo even though the size is also set directly on the <svg> tag in the markup */
+  .hexagon-logo svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .role-prompt {
+    font-size: 11px;
+  }
+
+  .home-greeting {
+    font-size: 18px;
+  }
+
+  .nav-logo {
+    font-size: 18px;
+  }
+
+  .stats-glass-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .service-card {
+    padding: 16px;
+  }
+}
