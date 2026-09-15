@@ -40,7 +40,6 @@
         await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
       },
 
-      // Ore's Geospatial API Call with Lat/Lng coordinates
       getNearbyServices: async (coords = {}) => {
         const { lat, lng } = coords;
         let url = `${API_BASE}/services`;
@@ -148,8 +147,7 @@
             setCurrentUser(user);
 
             if (user.role === 'buyer') {
-              // Fetch user location dynamically for Ore's PostGIS endpoint
-              let userCoords = { lat: 6.5244, lng: 3.3792 }; // Default Lagos fallback
+              let userCoords = { lat: 6.5244, lng: 3.3792 };
               if (navigator.geolocation) {
                 await new Promise((resolve) => {
                   navigator.geolocation.getCurrentPosition(
@@ -293,6 +291,30 @@
                 <p className="home-subgreeting">Here's what's happening near you today.</p>
               </div>
               <span className="role-badge">{roleLabel}</span>
+            </div>
+
+            {/* RESTORED STATS GLASS PANEL */}
+            <div className="stats-glass-panel">
+              {currentUser.role === 'buyer' && (
+                <>
+                  <div className="stat-item"><span className="stat-number">{myRequests.filter(r => r.status === 'active').length}</span><span className="stat-label">Active Requests</span></div>
+                  <div className="stat-item"><span className="stat-number">12</span><span className="stat-label">Completed Jobs</span></div>
+                  <div className="stat-item"><span className="stat-number">4.8</span><span className="stat-label">Avg. Rating Given</span></div>
+                </>
+              )}
+              {currentUser.role === 'seller' && (
+                <>
+                  <div className="stat-item"><span className="stat-number">{listings.filter(l => l.status === 'Active').length}</span><span className="stat-label">Active Listings</span></div>
+                  <div className="stat-item"><span className="stat-number">{listings.reduce((acc, curr) => acc + (parseInt(curr.views) || 0), 0)}</span><span className="stat-label">Total Views</span></div>
+                </>
+              )}
+              {currentUser.role === 'courier' && (
+                <>
+                  <div className="stat-item"><span className="stat-number">{deliveries.length}</span><span className="stat-label">Available Jobs</span></div>
+                  <div className="stat-item"><span className="stat-number">27</span><span className="stat-label">Deliveries Done</span></div>
+                  <div className="stat-item"><span className="stat-number">4.9</span><span className="stat-label">Courier Rating</span></div>
+                </>
+              )}
             </div>
 
             {currentUser.role === 'buyer' && (
