@@ -9,23 +9,21 @@
 
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  
-  <!-- Importing the Babel Compiler via CDN -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
-  <!-- THE FIX: Added the official Google Identity Services script to securely handle the OAuth 2.0 flow -->
+  <!-- Official Google Identity Services script -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div id="root"></div>
 
-    <script type="text/babel">
-    const { useState } = React;
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-    // THE FIX: Classification lists live at module scope so both the onboarding form and (later) the post-creation
-    // forms can reuse the exact same category names — keeping data consistent across the whole app
-    // THE FIX: .sort() appended to both lists guarantees alphabetical order permanently, regardless of what order
-    // new categories get added in later
+    const USE_MOCK_DATA = false;
+    const API_BASE = 'https://getit.socialappwebsite.me/api';
+    const GOOGLE_CLIENT_ID = '230604988868-b2tsvfvqbp79u06aj8oe01o45d4ftood.apps.googleusercontent.com';
+
     const PROVIDER_CLASSIFICATIONS = [
       'Furniture', 'Mechanical Engineering', 'Electrical Engineering', 'Cook', 'Plumbing',
       'Entertainment', 'Electronic Devices', 'Health Expert', 'Gym', 'Graphic Design',
@@ -39,76 +37,43 @@
       'Beauty Products', 'Toys'
     ].sort();
 
-    // THE FIX: Flip this to false once the real backend exists. Every Api function below will then call the real
-    // endpoint instead of its mock branch — nothing outside this Api object needs to change when that happens
-    const USE_MOCK_DATA = true;
-    const API_BASE = 'https://getit.socialappwebsite.me/api';
-
-    // THE FIX: setTimeout has no built-in Promise support, so this helper wraps it in one. It simulates real
-    // network latency in mock mode, so loading states are actually visible and testable right now instead of
-    // resolving instantly and hiding bugs that would only show up once a real, slower network call is involved
-    const mockDelay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    // THE FIX: The API layer. Every function returns a Promise with the exact same shape whether it's running in
-    // mock mode or hitting a real endpoint, so the rest of this file never needs to know or care which one is happening
     const Api = {
-      // THE FIX: Checks whether this Google account has already completed onboarding for the selected role
-      checkUser: async (role) => {
-        if (USE_MOCK_DATA) {
-          await mockDelay();
-          const existing = localStorage.getItem(`registered_${role}`);
-          return existing ? JSON.parse(existing) : null;
-        }
-        const res = await fetch(`${API_BASE}/users/exists?role=${role}`, { credentials: 'include' });
-        if (!res.ok) return null;
+      // POST ID token to backend for server-side verification and cookie issuance
+      verifyGoogleAuth: async (credential, role) => {
+        const res = await fetch(`${API_BASE}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ credential, role })
+        });
+        if (!res.ok) throw new Error('Authentication failed server-side');
         return res.json();
       },
 
-      // THE FIX: Saves a brand-new user record from the onboarding form
+      // Saves brand new user record to PostgreSQL database
       registerUser: async (userRecord) => {
-        if (USE_MOCK_DATA) {
-          await mockDelay();
-          const serialized = JSON.stringify(userRecord);
-          localStorage.setItem(`registered_${userRecord.role}`, serialized);
-          localStorage.setItem('currentUser', serialized);
-          return userRecord;
-        }
         const res = await fetch(`${API_BASE}/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(userRecord)
         });
-        if (!res.ok) throw new Error('Registration failed');
-        return res.json();
-      },
-
-      // THE FIX: Marks an already-registered user as the active session — used when they skip onboarding entirely
-      startSession: async (userRecord) => {
-        if (USE_MOCK_DATA) {
-          await mockDelay(200);
-          localStorage.setItem('currentUser', JSON.stringify(userRecord));
-          return userRecord;
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || 'Registration failed');
         }
-        const res = await fetch(`${API_BASE}/auth/session`, { method: 'POST', credentials: 'include' });
-        if (!res.ok) throw new Error('Could not start session');
         return res.json();
       }
     };
 
     const LoginPage = () => {
       const [selectedRole, setSelectedRole] = useState('buyer');
-      // THE FIX: Added authStage to track whether the user is viewing the login button or the PII onboarding form
       const [authStage, setAuthStage] = useState('login'); 
-      // THE FIX: Stores the real Google profile (name, email, picture) once fetched, instead of hardcoded placeholder text
-      const [googleProfile, setGoogleProfile] = useState(null);
-      // THE FIX: Tracks whether we're mid-network-call (fetching Google's userinfo) so we can show a loading state instead of a frozen button
+      const [googlePayload, setGooglePayload] = useState(null);
       const [isAuthenticating, setIsAuthenticating] = useState(false);
-            // THE FIX: Tracks whether a Seller identifies as a Service Provider or a Trader, which determines which
-      // classification list (skills vs. goods) they choose from below
       const [providerType, setProviderType] = useState('');
-      // THE FIX: "serviceCategory" (a single string) has been replaced with "classifications" (an array), since a
-      // Service Provider or Trader can now select MULTIPLE categories instead of just one
+      const [classificationSearch, setClassificationSearch] = useState('');
+
       const [formData, setFormData] = useState({
         username: '',
         fullName: '',
@@ -120,8 +85,6 @@
         idType: ''
       });
 
-      // THE FIX: A single generic handler reused across every input field. It reads the input's "name" attribute
-      // and updates only that one key in formData, using the Spread Operator to copy the rest of the object unchanged
       const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData((prevData) => ({
@@ -130,12 +93,6 @@
         }));
       };
 
-      // THE FIX: Tracks what's currently typed into the classification search box, so the checkbox grid below can
-      // be filtered down to matching categories in real time
-      const [classificationSearch, setClassificationSearch] = useState('');
-
-      // THE FIX: Toggles one classification string in or out of the classifications array. .includes() checks if
-      // it's already selected; .filter() removes it if so, or the Spread Operator appends it if not
       const handleClassificationToggle = (option) => {
         setFormData((prevData) => {
           const alreadySelected = prevData.classifications.includes(option);
@@ -148,93 +105,78 @@
         });
       };
 
-            const handleGoogleLogin = (e) => {
-        e.preventDefault(); 
-        
+      // Server-side Google ID Token authentication process
+      const processGoogleAuth = async (idToken) => {
+        setIsAuthenticating(true);
         try {
-          const client = google.accounts.oauth2.initTokenClient({
-            client_id: '230604988868-b2tsvfvqbp79u06aj8oe01o45d4ftood.apps.googleusercontent.com',
-            scope: 'email profile',
-            // THE FIX: The callback is now "async" so it can pause and wait for the userinfo fetch below to finish
-            callback: async (tokenResponse) => {
-              // THE FIX: Turn on the loading state immediately so the button reflects that a network request is in progress
-              setIsAuthenticating(true);
-
-              try {
-                // THE FIX: Call Google's userinfo endpoint with the access token to fetch the REAL signed-in user's name, email,
-                // and photo, replacing the old hardcoded "Oluyemi" / "oluyemiayomikun689@gmail.com" placeholder text entirely
-                const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: {
-                    Authorization: `Bearer ${tokenResponse.access_token}`
-                  }
-                });
-
-                if (!userInfoResponse.ok) {
-                  throw new Error('Failed to fetch Google profile data.');
-                }
-
-                const profile = await userInfoResponse.json();
-                // THE FIX: profile now contains { name, email, picture, ... } straight from Google, no more hardcoded text
-                setGoogleProfile(profile);
-
-                // THE FIX: Now routed through the Api layer instead of reading Local Storage directly. In mock
-                // mode this still reads Local Storage internally, but this code no longer knows or cares — it just
-                // awaits a Promise and gets back a user record or null, exactly like a real backend call would
-                const existingRecord = await Api.checkUser(selectedRole);
-
-                if (existingRecord) {
-                  await Api.startSession(existingRecord);
-                  window.location.href = "home.html";
-                } else {
-                  // THE FIX: If no record exists for this role, show the onboarding form to collect the rest of their profile
-                  setAuthStage('onboarding');
-                }
-              } catch (error) {
-                // THE FIX: Any network failure now shows a clear message instead of silently leaving the user on a frozen button
-                alert("We couldn't reach Google to verify your account. Please check your connection and try again.");
-              } finally {
-                // THE FIX: "finally" always runs whether the try succeeded or failed, so the loading state never gets stuck on
-                setIsAuthenticating(false);
-              }
-            },
-          });
+          const data = await Api.verifyGoogleAuth(idToken, selectedRole);
           
-          client.requestAccessToken();
+          if (!data.isNewUser) {
+            // Existing user session confirmed -> Redirect to dashboard immediately
+            window.location.href = "home.html";
+          } else {
+            // New user -> Save payload and switch to onboarding form
+            setGooglePayload(data.googlePayload);
+            setFormData((prev) => ({
+              ...prev,
+              fullName: data.googlePayload.name || ''
+            }));
+            setAuthStage('onboarding');
+          }
         } catch (error) {
-          alert("Google authentication script has not finished loading. Please check your connection and try again.");
+          alert("Server failed to verify Google login. Please try again.");
+        } finally {
+          setIsAuthenticating(false);
         }
       };
 
-                  // THE FIX: Now "async" so it can await the Api call below, instead of writing directly to Local Storage
+      // Trigger Google ID Token prompt
+      const handleGoogleLogin = (e) => {
+        e.preventDefault();
+        if (typeof google === 'undefined' || !google.accounts) {
+          alert("Google script loading... Please try again in a moment.");
+          return;
+        }
+
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response) => {
+            if (response.credential) {
+              processGoogleAuth(response.credential);
+            }
+          }
+        });
+
+        google.accounts.id.prompt();
+      };
+
       const handleOnboardingSubmit = async (e) => {
         e.preventDefault();
         setIsAuthenticating(true);
 
-        // THE FIX: Combine the real Google profile with everything the user typed, plus the selected role, into one
-        // record — the exact object that gets sent to the real backend once it exists
         const userRecord = {
           ...formData,
           role: selectedRole,
           providerType: selectedRole === 'seller' ? providerType : '',
-          email: googleProfile ? googleProfile.email : '',
-          googleName: googleProfile ? googleProfile.name : '',
-          googlePicture: googleProfile ? googleProfile.picture : ''
+          email: googlePayload ? googlePayload.email : '',
+          googleId: googlePayload ? googlePayload.googleId : '',
+          googlePicture: googlePayload ? googlePayload.picture : ''
         };
 
         try {
           await Api.registerUser(userRecord);
+          // Redirect to home.html on successful profile registration
           window.location.href = "home.html";
         } catch (error) {
-          alert("We couldn't save your profile. Please check your connection and try again.");
+          alert(error.message || "We couldn't save your profile. Please check your inputs.");
           setIsAuthenticating(false);
         }
-      }
+      };
 
       return (
         <div className="layout-wrapper">
           <div className="auth-card">
             
-            {/* THE FIX: Implemented a Ternary Operator. If authStage is 'login', show the Google button. If not, show the form. */}
             {authStage === 'login' ? (
               <>
                 <div className="card-header">
@@ -273,17 +215,14 @@
                   </div>
                 </div>
 
-                                <form onSubmit={handleGoogleLogin} className="auth-form">
-                  {/* THE FIX: disabled={isAuthenticating} prevents double-clicking mid-request and firing two Google popups */}
+                <form onSubmit={handleGoogleLogin} className="auth-form">
                   <button type="submit" className="google-sso-btn" disabled={isAuthenticating}>
                     <div className="user-avatar-placeholder">
-                      {/* THE FIX: Shows a plain "G" before login instead of a hardcoded "O" for a specific person */}
                       <span>G</span>
                     </div>
                     <div className="btn-text-group">
-                      {/* THE FIX: Ternary Operator swaps the label to "Signing in..." while the request to Google is in flight */}
-                      <span className="primary-text">{isAuthenticating ? 'Signing in...' : 'Continue with Google'}</span>
-                      <span className="secondary-text">Uses your Google account</span>
+                      <span className="primary-text">{isAuthenticating ? 'Authenticating...' : 'Continue with Google'}</span>
+                      <span className="secondary-text">Uses secure Google account</span>
                     </div>
                     <svg width="24" height="24" viewBox="0 0 48 48" className="google-logo">
                       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
@@ -299,42 +238,38 @@
                 </div>
               </>
             ) : (
-              // THE FIX: The newly designed PII form that renders after successful login
               <>
-                                <div className="card-header">
+                <div className="card-header">
                   <h1 className="brand-title">Complete <span>Profile</span></h1>
-                  {/* THE FIX: Greets the user by their real Google first name, falling back to the generic version if it hasn't loaded */}
                   <p className="brand-subtitle">
-                    {googleProfile
-                      ? `Welcome, ${googleProfile.name.split(' ')[0]}! Let's set up your ${selectedRole} account.`
+                    {googlePayload
+                      ? `Welcome, ${googlePayload.name.split(' ')[0]}! Let's set up your ${selectedRole} account.`
                       : `Let's set up your ${selectedRole} account.`}
                   </p>
                 </div>
                 
                 <form onSubmit={handleOnboardingSubmit} className="onboarding-form">
-                  {/* THE FIX: Added the mandatory Username field for all 3 entity roles to establish a unique Identifier [a specific piece of data used to distinguish one user from another in a database] */}
-                                    <div className="input-group">
+                  <div className="input-group">
                     <label>Username</label>
                     <input type="text" name="username" required placeholder="Choose a unique username" className="custom-input" value={formData.username} onChange={handleInputChange} />
                   </div>
 
-                                    <div className="input-group">
+                  <div className="input-group">
                     <label>Full Name</label>
-                    {/* THE FIX: Placeholder changed from a specific hardcoded name to a generic example, since every user sees this field */}
                     <input type="text" name="fullName" required placeholder="e.g., Jane Doe" className="custom-input" value={formData.fullName} onChange={handleInputChange} />
                   </div>
                   
-                                    <div className="input-group">
+                  <div className="input-group">
                     <label>Phone Number</label>
                     <input type="tel" name="phone" required placeholder="+234..." className="custom-input" value={formData.phone} onChange={handleInputChange} />
                   </div>
 
-                                    <div className="input-group">
+                  <div className="input-group">
                     <label>Date of Birth</label>
                     <input type="date" name="dob" required className="custom-input" value={formData.dob} onChange={handleInputChange} />
                   </div>
 
-                                    <div className="input-group">
+                  <div className="input-group">
                     <label>Nationality</label>
                     <select name="nationality" required className="custom-input" value={formData.nationality} onChange={handleInputChange}>
                       <option value="">Select Nationality...</option>
@@ -343,16 +278,13 @@
                     </select>
                   </div>
 
-                                    <div className="input-group">
+                  <div className="input-group">
                     <label>State of Origin (Optional)</label>
                     <input type="text" name="stateOfOrigin" placeholder="e.g., Lagos, Ogun" className="custom-input" value={formData.stateOfOrigin} onChange={handleInputChange} />
                   </div>
 
-                  {/* Logical AND Operators to show specific fields based on the role */}
-                                    {selectedRole === 'seller' && (
+                  {selectedRole === 'seller' && (
                     <>
-                      {/* THE FIX: Provider/Trader toggle, using the same toggle-btn pattern as the Buyer/Seller/Courier
-                          role selector above, so the visual language stays consistent across the whole form */}
                       <div className="input-group">
                         <label>What best describes you?</label>
                         <div className="role-toggle-group" style={{ marginTop: '4px' }}>
@@ -373,14 +305,9 @@
                         </div>
                       </div>
 
-                      {/* THE FIX: Multi-select checkbox grid. The list shown depends on providerType. A user can
-                          check MULTIPLE boxes here — unlike a Buyer's request or a single listing, which each get
-                          only ONE classification later on */}
                       {providerType && (
                         <div className="input-group">
                           <label>Select all {providerType === 'provider' ? 'skills' : 'goods categories'} that apply</label>
-                          {/* THE FIX: .toLowerCase() on both the option text and the search term makes the match
-                              case-insensitive, so typing "plumb" or "Plumb" both find "Plumbing" */}
                           <input
                             type="text"
                             className="custom-input classification-search"
@@ -407,7 +334,7 @@
                     </>
                   )}
 
-                                    {selectedRole === 'courier' && (
+                  {selectedRole === 'courier' && (
                     <div className="input-group">
                       <label>Primary Means of Identification</label>
                       <select name="idType" required className="custom-input" value={formData.idType} onChange={handleInputChange}>
@@ -419,8 +346,6 @@
                     </div>
                   )}
 
-                  {/* THE FIX: Reuses the same isAuthenticating state already used by the Google button, so the form
-                      shows "Saving..." and disables itself while Api.registerUser() is in flight */}
                   <button type="submit" className="google-sso-btn continue-btn" disabled={isAuthenticating}>
                     <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>
                       {isAuthenticating ? 'Saving...' : 'Complete Profile'}
