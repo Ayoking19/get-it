@@ -74,7 +74,7 @@ app.post('/api/auth/google', authRateLimiter, async (req, res) => {
       res.cookie('session_token', user.id, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000
       });
       return res.json({ isNewUser: false, user });
@@ -137,7 +137,7 @@ app.post('/api/users', [
     res.cookie('session_token', newUser.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
