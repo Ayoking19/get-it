@@ -1005,3 +1005,188 @@ html, body {
     padding: 16px;
   }
 }
+
+/* THE FIX: Shared styles for the new pages (search, messages, notifications, create-listing, create-request) —
+   a consistent "back to dashboard" link, an empty-state message, and a simple two-pane message thread layout */
+.page-back-link {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.page-back-link:hover {
+  color: var(--pure-white);
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.thread-row {
+  background: var(--card-deep-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.thread-row:hover {
+  transform: translateX(4px);
+}
+
+.thread-row.active-thread {
+  border-color: #fb923c;
+}
+
+.message-bubble {
+  max-width: 75%;
+  padding: 10px 16px;
+  border-radius: 16px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.message-bubble.sent {
+  background: var(--cta-orange);
+  color: var(--pure-white);
+  margin-left: auto;
+}
+
+.message-bubble.received {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pure-white);
+}
+
+.message-compose {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.message-compose input {
+  flex: 1;
+}
+
+/* ============================================= */
+/* CUSTOM GLASSMORPHISM ALERT MODAL              */
+/* ============================================= */
+.alert-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: alertFadeIn 0.25s ease-out;
+}
+
+.alert-card {
+  background: var(--card-deep-blue);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 40px 32px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: alertSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alert-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.alert-icon.error {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.alert-icon.success {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.alert-title {
+  color: var(--pure-white);
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.alert-message {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.alert-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.25s ease;
+}
+
+.alert-btn.error {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pure-white);
+  border: 1px solid var(--border-subtle);
+}
+
+.alert-btn.error:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.alert-btn.success {
+  background: var(--cta-orange);
+  color: var(--pure-white);
+}
+
+.alert-btn.success:hover {
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.35);
+  transform: translateY(-2px);
+}
+
+@keyframes alertFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes alertSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.alert-icon.confirm {
+  background: rgba(249, 115, 22, 0.1);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}

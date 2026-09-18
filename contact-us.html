@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get It - Contact Support</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const CustomAlert = ({ isOpen, title, message, type, onClose, onConfirm }) => {
+      if (!isOpen) return null;
+      return (
+        <div className="alert-overlay">
+          <div className="alert-card">
+            <div className={`alert-icon ${type}`}>
+              {type === 'success' ? (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              ) : type === 'confirm' ? (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              ) : (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              )}
+            </div>
+            <h3 className="alert-title">{title}</h3>
+            <p className="alert-message">{message}</p>
+            
+            {type === 'confirm' ? (
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="alert-btn error" style={{ flex: 1 }} onClick={onClose}>No</button>
+                <button className="alert-btn success" style={{ flex: 1 }} onClick={() => { onClose(); if (onConfirm) onConfirm(); }}>Yes</button>
+              </div>
+            ) : (
+              <button className={`alert-btn ${type}`} onClick={() => { onClose(); if (onConfirm) onConfirm(); }}>
+                {type === 'success' ? 'Continue' : 'Dismiss'}
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const ContactPage = () => {
+      const [formData, setFormData] = useState({ subject: '', message: '' });
+      const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'error', onConfirm: null });
+
+      const showAlert = (title, message, type = 'error', onConfirm = null) => {
+        setAlertConfig({ isOpen: true, title, message, type, onConfirm });
+      };
+
+      const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        // Simulating a network request for UI responsiveness testing
+        showAlert(
+          'Message Sent', 
+          'Thank you for contacting Get It Support. Our team will review your ticket and respond shortly.', 
+          'success', 
+          () => { window.location.href = "home.html"; }
+        );
+      };
+
+      return (
+        <div className="layout-wrapper">
+          <div className="auth-card" style={{ maxWidth: '500px' }}>
+            <a href="home.html" className="page-back-link">← Back to dashboard</a>
+            <div className="card-header">
+              <h1 className="brand-title">Contact <span>Support</span></h1>
+              <p className="brand-subtitle">How can we help you today?</p>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="onboarding-form">
+              <div className="input-group">
+                <label>Issue Category</label>
+                <select name="subject" required className="custom-input" value={formData.subject} onChange={handleChange}>
+                  <option value="">Select an issue...</option>
+                  <option value="account">Account & Login</option>
+                  <option value="payment">Payments & Refunds</option>
+                  <option value="report">Report a User</option>
+                  <option value="other">Other Inquiry</option>
+                </select>
+              </div>
+
+              <div className="input-group">
+                <label>Message</label>
+                <textarea 
+                  name="message" 
+                  required 
+                  className="custom-input" 
+                  placeholder="Please describe your issue in detail..." 
+                  value={formData.message} 
+                  onChange={handleChange}
+                  style={{ minHeight: '120px', resize: 'vertical', fontFamily: 'Inter, sans-serif' }}
+                />
+              </div>
+
+              <button type="submit" className="google-sso-btn continue-btn">
+                <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>Send Message</span>
+              </button>
+            </form>
+          </div>
+          <CustomAlert {...alertConfig} onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })} />
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<ContactPage />);
+  </script>
+</body>
+</html>

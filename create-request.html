@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get It - New Request</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const ALL_CLASSIFICATIONS = [
+      'Furniture', 'Mechanical Engineering', 'Electrical Engineering', 'Cook', 'Plumbing',
+      'Entertainment', 'Electronic Devices', 'Health Expert', 'Gym', 'Graphic Design',
+      'Web Development', 'Photography', 'Tutoring', 'Event Planning', 'Beauty & Salon',
+      'Auto Repair', 'Tailoring', 'Cleaning Services', 'Painting', 'Food', 'Clothing',
+      'Electronics', 'Cars', 'Houses', 'Watches', 'Cooking Utensils', 'Transport',
+      'Books', 'Jewelry', 'Sports Equipment', 'Beauty Products', 'Toys', 'Appliances'
+    ].sort();
+
+    const CustomAlert = ({ isOpen, title, message, type, onClose, onConfirm }) => {
+      if (!isOpen) return null;
+      return (
+        <div className="alert-overlay">
+          <div className="alert-card">
+            <div className={`alert-icon ${type}`}>
+              {type === 'success' ? (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              ) : (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              )}
+            </div>
+            <h3 className="alert-title">{title}</h3>
+            <p className="alert-message">{message}</p>
+            <button className={`alert-btn ${type}`} onClick={() => { onClose(); if (onConfirm) onConfirm(); }}>
+              {type === 'success' ? 'Continue' : 'Dismiss'}
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    const CreateRequestPage = () => {
+      const [formData, setFormData] = useState({ title: '', classification: '', budget: '' });
+      const [alertConfig, setAlertConfig] = useState({ isOpen: false, title: '', message: '', type: 'error', onConfirm: null });
+
+      const showAlert = (title, message, type = 'error', onConfirm = null) => {
+        setAlertConfig({ isOpen: true, title, message, type, onConfirm });
+      };
+
+      const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const existing = JSON.parse(localStorage.getItem('pendingBuyerRequests') || '[]');
+        existing.push({ ...formData, id: Date.now(), createdAt: new Date().toISOString() });
+        localStorage.setItem('pendingBuyerRequests', JSON.stringify(existing));
+        
+        showAlert('Request Broadcasted', 'Your request is live. Sellers in your area will be notified shortly.', 'success', () => {
+          window.location.href = "home.html";
+        });
+      };
+
+      return (
+        <div className="layout-wrapper">
+          <div className="auth-card">
+            <a href="home.html" className="page-back-link">← Back to dashboard</a>
+            <div className="card-header">
+              <h1 className="brand-title">New <span>Request</span></h1>
+              <p className="brand-subtitle">Tell Sellers what you need.</p>
+            </div>
+            <form onSubmit={handleSubmit} className="onboarding-form">
+              <div className="input-group">
+                <label>What do you need?</label>
+                <input type="text" name="title" required className="custom-input" placeholder="e.g., Need a plumber to fix a leak" value={formData.title} onChange={handleChange} />
+              </div>
+              <div className="input-group">
+                <label>Classification</label>
+                <input type="text" name="classification" list="classification-options" required className="custom-input" placeholder="Search classification..." value={formData.classification} onChange={handleChange} />
+                <datalist id="classification-options">
+                  {ALL_CLASSIFICATIONS.map((c) => <option value={c} key={c} />)}
+                </datalist>
+              </div>
+              <div className="input-group">
+                <label>Budget</label>
+                <input type="text" name="budget" required className="custom-input" placeholder="e.g., ₦7,000" value={formData.budget} onChange={handleChange} />
+              </div>
+              <button type="submit" className="google-sso-btn continue-btn">
+                <span className="primary-text" style={{ color: 'white', textAlign: 'center', width: '100%' }}>Post Request</span>
+              </button>
+            </form>
+          </div>
+          <CustomAlert {...alertConfig} onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })} />
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<CreateRequestPage />);
+  </script>
+</body>
+</html>
