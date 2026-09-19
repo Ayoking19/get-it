@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 const { Pool } = require('pg');
+const path = require('path');
 
 const app = express();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
