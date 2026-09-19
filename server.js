@@ -415,7 +415,7 @@ app.get('/api/deliveries', authenticateSession, async (req, res) => {
 app.use(express.static(path.join(__dirname, 'getit-frontend', 'dist')));
 
 // The Catch-All Route: If a user asks for a page that isn't an API route, hand them the React app
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'getit-frontend', 'dist', 'index.html'));
 });
 
