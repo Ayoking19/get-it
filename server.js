@@ -22,9 +22,8 @@ app.use(cors({
     const allowedOrigins = [
       process.env.FRONTEND_URL,
       'https://getit.socialappwebsite.me',
-      'http://localhost:5173' // Your new Vite frontend
+      'http://localhost:5173'
     ];
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -37,14 +36,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
-// Rate Limiter for Auth
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { message: 'Too many authentication attempts. Please try again later.' }
 });
 
-// Session Middleware
 const authenticateSession = async (req, res, next) => {
   const userId = req.cookies.session_token;
   if (!userId) return res.status(401).json({ message: 'Unauthorized session' });
@@ -63,8 +60,6 @@ const authenticateSession = async (req, res, next) => {
 };
 
 // --- AUTH ENDPOINTS ---
-
-// POST /api/auth/google
 app.post('/api/auth/google', authRateLimiter, async (req, res) => {
   const { credential, role } = req.body;
   if (!credential || !role) return res.status(400).json({ message: 'Missing credential or role' });
@@ -102,7 +97,6 @@ app.post('/api/auth/google', authRateLimiter, async (req, res) => {
   }
 });
 
-// GET /api/users/exists
 app.get('/api/users/exists', async (req, res) => {
   const { email, role } = req.query;
   if (!email || !role) return res.status(400).json({ message: 'Email and role required' });
@@ -115,7 +109,6 @@ app.get('/api/users/exists', async (req, res) => {
   }
 });
 
-// POST /api/users
 app.post('/api/users', [
   body('username').trim().isLength({ min: 3 }).escape(),
   body('fullName').trim().notEmpty().escape(),
@@ -160,15 +153,12 @@ app.post('/api/users', [
   }
 });
 
-// POST /api/auth/logout
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('session_token');
   return res.json({ message: 'Logged out successfully' });
 });
 
 // --- DASHBOARD ENDPOINTS ---
-
-// GET /api/me
 app.get('/api/me', authenticateSession, async (req, res) => {
   try {
     let classifications = [];
@@ -182,7 +172,6 @@ app.get('/api/me', authenticateSession, async (req, res) => {
   }
 });
 
-// GET /api/listings
 app.get('/api/listings', authenticateSession, async (req, res) => {
   try {
     const sellerId = req.query.sellerId || req.user.id;
@@ -193,7 +182,6 @@ app.get('/api/listings', authenticateSession, async (req, res) => {
   }
 });
 
-// POST /api/listings
 app.post('/api/listings', authenticateSession, async (req, res) => {
   const { title, classification, price, lat, lng } = req.body;
   try {
@@ -208,7 +196,6 @@ app.post('/api/listings', authenticateSession, async (req, res) => {
   }
 });
 
-// PUT /api/listings/:id
 app.put('/api/listings/:id', authenticateSession, async (req, res) => {
   const { id } = req.params;
   const { title, classification, status } = req.body;
@@ -225,7 +212,6 @@ app.put('/api/listings/:id', authenticateSession, async (req, res) => {
   }
 });
 
-// DELETE /api/listings/:id
 app.delete('/api/listings/:id', authenticateSession, async (req, res) => {
   const { id } = req.params;
   try {
@@ -237,7 +223,6 @@ app.delete('/api/listings/:id', authenticateSession, async (req, res) => {
   }
 });
 
-// GET /api/services (YOUR GEOSPATIAL FEED ENDPOINT IS HERE)
 app.get('/api/services', authenticateSession, async (req, res) => {
   const { classification, lat, lng, radius = 10000 } = req.query;
   try {
@@ -273,7 +258,6 @@ app.get('/api/services', authenticateSession, async (req, res) => {
   }
 });
 
-// GET /api/requests/mine
 app.get('/api/requests/mine', authenticateSession, async (req, res) => {
   try {
     const query = `
@@ -290,26 +274,38 @@ app.get('/api/requests/mine', authenticateSession, async (req, res) => {
   }
 });
 
-// POST /api/requests
 app.post('/api/requests', authenticateSession, async (req, res) => {
-  const { listingId } = req.body;
+  const { listingId, title, classification, budget } = req.body;
   try {
-    const listingRes = await db.query('SELECT * FROM listings WHERE id = $1', [listingId]);
-    if (listingRes.rows.length === 0) return res.status(404).json({ message: 'Listing not found' });
-
-    const listing = listingRes.rows[0];
+    if (listingId) {
+      const listingRes = await db.query('SELECT * FROM listings WHERE id = $1', [listingId]);
+      if (listingRes.rows.length === 0) return res.status(404).json({ message: 'Listing not found' });
+      
+      const listing = listingRes.rows[0];
+      const query = `
+        INSERT INTO requests (buyer_id, listing_id, title, classification, budget, status)
+        VALUES ($1, $2, $3, $4, $5, 'waiting') RETURNING *;
+      `;
+      const result = await db.query(query, [req.user.id, listing.id, listing.title, listing.classification, listing.price]);
+      return res.status(201).json(result.rows[0]);
+    } 
+    
+    if (!title || !classification || !budget) {
+        return res.status(400).json({ message: 'Missing required fields for general request' });
+    }
+    
     const query = `
       INSERT INTO requests (buyer_id, listing_id, title, classification, budget, status)
-      VALUES ($1, $2, $3, $4, $5, 'waiting') RETURNING *;
+      VALUES ($1, NULL, $2, $3, $4, 'waiting') RETURNING *;
     `;
-    const result = await db.query(query, [req.user.id, listing.id, listing.title, listing.classification, listing.price]);
+    const result = await db.query(query, [req.user.id, title, classification, budget]);
     return res.status(201).json(result.rows[0]);
+
   } catch (err) {
     return res.status(500).json({ message: 'Failed to create request' });
   }
 });
 
-// PATCH /api/requests/:id
 app.patch('/api/requests/:id', authenticateSession, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -322,7 +318,6 @@ app.patch('/api/requests/:id', authenticateSession, async (req, res) => {
   }
 });
 
-// GET /api/requests/matching
 app.get('/api/requests/matching', authenticateSession, async (req, res) => {
   try {
     const classRes = await db.query('SELECT classification FROM user_classifications WHERE user_id = $1', [req.user.id]);
@@ -342,7 +337,6 @@ app.get('/api/requests/matching', authenticateSession, async (req, res) => {
   }
 });
 
-// GET /api/notifications
 app.get('/api/notifications', authenticateSession, async (req, res) => {
   try {
     const result = await db.query(
@@ -353,6 +347,77 @@ app.get('/api/notifications', authenticateSession, async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: 'Failed to fetch notifications' });
   }
+});
+
+// PUT /api/users/me (Update User Profile)
+app.put('/api/users/me', authenticateSession, async (req, res) => {
+  const { fullName, username, phone, stateOfOrigin } = req.body;
+  try {
+    const query = `
+      UPDATE users 
+      SET full_name = COALESCE($1, full_name), 
+          username = COALESCE($2, username), 
+          phone = COALESCE($3, phone),
+          state_of_origin = COALESCE($4, state_of_origin)
+      WHERE id = $5 RETURNING *;
+    `;
+    const result = await db.query(query, [fullName, username, phone, stateOfOrigin, req.user.id]);
+    return res.json(result.rows[0]);
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to update profile' });
+  }
+});
+
+// GET /api/messages/:otherUser (Fetch Chat Thread)
+app.get('/api/messages/:otherUser', authenticateSession, async (req, res) => {
+  const { otherUser } = req.params;
+  const myUsername = req.user.username;
+  try {
+    const query = `
+      SELECT * FROM messages 
+      WHERE (sender_username = $1 AND receiver_username = $2) 
+         OR (sender_username = $2 AND receiver_username = $1)
+      ORDER BY created_at ASC;
+    `;
+    const result = await db.query(query, [myUsername, otherUser]);
+    return res.json(result.rows);
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to fetch messages' });
+  }
+});
+
+// POST /api/messages (Send a Message)
+app.post('/api/messages', authenticateSession, async (req, res) => {
+  const { receiverUsername, messageText } = req.body;
+  try {
+    const query = `
+      INSERT INTO messages (sender_username, receiver_username, message_text)
+      VALUES ($1, $2, $3) RETURNING *;
+    `;
+    const result = await db.query(query, [req.user.username, receiverUsername, messageText]);
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to send message' });
+  }
+});
+
+// GET /api/deliveries (Fetch Available Courier Jobs)
+app.get('/api/deliveries', authenticateSession, async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM deliveries WHERE status = 'Available' ORDER BY created_at DESC;");
+    return res.json(result.rows);
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to fetch deliveries' });
+  }
+});
+
+// --- FRONTEND INTEGRATION ---
+// Tell Node to publicly serve the compiled Vite files
+app.use(express.static(path.join(__dirname, 'getit-frontend', 'dist')));
+
+// The Catch-All Route: If a user asks for a page that isn't an API route, hand them the React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'getit-frontend', 'dist', 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
