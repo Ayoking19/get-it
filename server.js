@@ -17,7 +17,19 @@ const db = new Pool({
 
 // CORS Configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://getit.socialappwebsite.me',
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://getit.socialappwebsite.me',
+      'http://localhost:5173' // Your new Vite frontend
+    ];
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
