@@ -21,7 +21,6 @@ app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
       process.env.FRONTEND_URL,
-      'https://getit.socialappwebsite.me',
       'http://localhost:5173'
     ];
     if (!origin || allowedOrigins.includes(origin)) {
